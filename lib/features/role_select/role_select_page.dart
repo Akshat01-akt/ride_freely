@@ -23,12 +23,15 @@ class RoleSelectPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 24),
-              Container(
-                width: 56,
-                height: 56,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: AppColors.fuchsia, borderRadius: BorderRadius.circular(16)),
-                child: const Icon(Icons.directions_car_filled_rounded, color: AppColors.cream, size: 30),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: AppColors.fuchsia, borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.directions_car_filled_rounded, color: AppColors.cream, size: 30),
+                ),
               ),
               const SizedBox(height: 24),
               Text('Welcome to\nRide Freely',
