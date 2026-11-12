@@ -66,3 +66,26 @@ async def set_suspension(session: AsyncSession, redis: Redis, driver_id: uuid.UU
         profile.availability_status = AvailabilityStatus.OFFLINE
     await session.commit()
     return profile
+
+
+class NotApproved(Exception):
+    pass
+
+
+class StateLocked(Exception):
+    pass
+
+
+async def set_availability(
+    session: AsyncSession, redis: Redis, profile: DriverProfile, target: AvailabilityStatus
+) -> DriverProfile:
+    """A driver may only toggle between OFFLINE and AVAILABLE; every other state is owned by the system."""
+    if profile.availability_status not in (AvailabilityStatus.OFFLINE, AvailabilityStatus.AVAILABLE):
+        raise StateLocked
+    if target == AvailabilityStatus.AVAILABLE and profile.verification_status != VerificationStatus.APPROVED:
+        raise NotApproved
+    profile.availability_status = target
+    if target == AvailabilityStatus.OFFLINE:
+        await clear_location(session, redis, profile.id)
+    await session.commit()
+    return profile

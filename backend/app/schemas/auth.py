@@ -1,7 +1,7 @@
 import re
 import uuid
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
@@ -82,3 +82,7 @@ class DocumentOut(BaseModel):
     doc_type: str
     status: str
     review_note: str | None = None
+
+
+class AvailabilityRequest(BaseModel):
+    status: Literal["AVAILABLE", "OFFLINE"]

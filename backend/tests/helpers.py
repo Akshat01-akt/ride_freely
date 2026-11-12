@@ -34,3 +34,21 @@ async def register_customer(client, phone="+919876543210") -> dict:
     r = await client.post("/api/v1/auth/customer/register", json={**CUSTOMER, "phone": phone})
     assert r.status_code == 201, r.text
     return bearer(r.json())
+
+
+async def force_status(db_session, phone="+919876500000", **values):
+    """Set profile columns directly (verification_status / availability_status) for test setup."""
+    from sqlalchemy import update
+
+    from app.models.driver import DriverProfile
+    from app.models.user import User
+
+    sub = (await db_session.execute(__import__("sqlalchemy").select(User.id).where(User.phone == phone))).scalar_one()
+    await db_session.execute(update(DriverProfile).where(DriverProfile.user_id == sub).values(**values))
+    await db_session.commit()
+
+
+async def approved_driver(client, db_session, phone="+919876500000"):
+    headers, tokens = await register_driver(client, phone=phone)
+    await force_status(db_session, phone, verification_status="APPROVED")
+    return headers
