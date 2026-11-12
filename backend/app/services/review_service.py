@@ -7,8 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.booking import Booking, BookingStatus
+from app.models.customer import CustomerProfile
 from app.models.document import DocStatus, DocType, DriverDocument
 from app.models.driver import AvailabilityStatus, DriverProfile, VerificationStatus
+from app.models.user import Role, User
 from app.services.location_service import clear_location
 
 REQUIRED_DOCS = (DocType.LICENCE, DocType.ID_PROOF)
@@ -62,12 +64,14 @@ async def review_document(
     return doc
 
 
-async def _has_live_booking(session: AsyncSession, driver_id: uuid.UUID) -> bool:
-    """An accepted or running booking that has not ended yet; customers are counting on it."""
+async def _has_live_booking(
+    session: AsyncSession, driver_id: uuid.UUID | None = None, customer_id: uuid.UUID | None = None
+) -> bool:
+    """An accepted or running booking that has not ended yet; the other party is counting on it."""
     return (
         await session.scalar(
             select(Booking.id).where(
-                Booking.driver_id == driver_id,
+                (Booking.driver_id == driver_id) if driver_id is not None else (Booking.customer_id == customer_id),
                 Booking.status.in_((BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS)),
                 Booking.end_time > datetime.now(UTC),
             ).limit(1)
@@ -133,3 +137,29 @@ async def set_availability(
         await clear_location(session, redis, profile.id)
     await session.commit()
     return profile
+
+
+class ProtectedAccount(Exception):
+    pass
+
+
+async def set_user_active(session: AsyncSession, redis: Redis, user_id: uuid.UUID, active: bool) -> User:
+    """Turn an account off or on. Off means no login, no refresh and no token works (enforced where tokens are read)."""
+    user = await session.get(User, user_id)
+    if user is None:
+        raise NotFound
+    if not active:
+        if user.role == Role.ADMIN:
+            raise ProtectedAccount
+        driver = await session.scalar(select(DriverProfile).where(DriverProfile.user_id == user.id))
+        customer = await session.scalar(select(CustomerProfile).where(CustomerProfile.user_id == user.id))
+        if driver is not None and await _has_live_booking(session, driver_id=driver.id):
+            raise HasActiveBooking
+        if customer is not None and await _has_live_booking(session, customer_id=customer.id):
+            raise HasActiveBooking
+        if driver is not None and driver.availability_status in (AvailabilityStatus.AVAILABLE, AvailabilityStatus.RESERVED):
+            driver.availability_status = AvailabilityStatus.OFFLINE
+            await clear_location(session, redis, driver.id)
+    user.is_active = active
+    await session.commit()
+    return user
