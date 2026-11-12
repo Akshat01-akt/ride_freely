@@ -19,7 +19,13 @@ class AuthController extends GetxController {
 
   /// Called on app start: restores a stored session if the server still accepts it.
   Future<void> bootstrap() async {
-    if (!await _repo.hasSession()) {
+    try {
+      if (!await _repo.hasSession()) {
+        status.value = AuthStatus.unauthenticated;
+        return;
+      }
+    } catch (_) {
+      // Unreadable secure storage must not leave the app stuck on the splash screen.
       status.value = AuthStatus.unauthenticated;
       return;
     }

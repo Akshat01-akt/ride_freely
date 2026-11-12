@@ -1,8 +1,11 @@
+import asyncio
+import time
 import uuid
 from datetime import timedelta
 
 import pytest
 
+from app.core import security
 from app.core.security import (
     InvalidTokenError,
     create_token,
@@ -58,3 +61,31 @@ def test_tampered_token_rejected():
 def test_garbage_token_rejected():
     with pytest.raises(InvalidTokenError):
         decode_token("not-a-jwt", "access")
+
+
+async def test_password_hashing_does_not_block_the_event_loop(monkeypatch):
+    class SlowHasher:
+        def hash(self, plain):
+            time.sleep(0.3)
+            return "h"
+
+        def verify(self, plain, hashed):
+            time.sleep(0.3)
+            return True
+
+    monkeypatch.setattr(security, "_hasher", SlowHasher())
+    ticks = 0
+
+    async def ticker():
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.02)
+            ticks += 1
+
+    task = asyncio.create_task(ticker())
+    await asyncio.gather(
+        security.hash_password_async("x"),
+        security.verify_password_async("x", "h"),
+    )
+    task.cancel()
+    assert ticks >= 5, "event loop was blocked while hashing"

@@ -150,3 +150,17 @@ async def test_customer_register_creates_profile_row(client, db_session):
     await client.post("/api/v1/auth/customer/register", json=CUSTOMER)
     profiles = (await db_session.execute(select(CustomerProfile))).scalars().all()
     assert len(profiles) == 1
+
+
+async def test_leading_zero_and_country_code_variants_normalise_to_one_number(client):
+    r = await client.post("/api/v1/auth/customer/register", json={**CUSTOMER, "phone": "09876543210"})
+    assert r.status_code == 201
+    for variant in ("+91 98765 43210", "919876543210", "9876543210"):
+        dup = await client.post("/api/v1/auth/customer/register", json={**CUSTOMER, "phone": variant})
+        assert dup.status_code == 409, variant
+
+
+async def test_unicode_digits_and_foreign_or_malformed_numbers_are_rejected(client):
+    for bad in ("९८७६५४३२१०", "+91 0 9876543210", "+919876543210123", "+1234567890", "5876543210"):
+        r = await client.post("/api/v1/auth/customer/register", json={**CUSTOMER, "phone": bad})
+        assert r.status_code == 422, bad

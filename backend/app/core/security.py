@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 import jwt
+from fastapi.concurrency import run_in_threadpool
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
@@ -31,6 +32,15 @@ def hash_password(plain: str) -> str:
 
 def verify_password(plain: str, hashed: str) -> bool:
     return _hasher.verify(plain, hashed)
+
+
+async def hash_password_async(plain: str) -> str:
+    # Argon2 is deliberately slow; keep it off the event loop.
+    return await run_in_threadpool(hash_password, plain)
+
+
+async def verify_password_async(plain: str, hashed: str) -> bool:
+    return await run_in_threadpool(verify_password, plain, hashed)
 
 
 def create_token(

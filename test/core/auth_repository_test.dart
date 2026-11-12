@@ -78,6 +78,20 @@ void main() {
     expect(await s.storage.read(), isNull);
   });
 
+  test('a transient refresh failure (503) keeps the stored tokens', () async {
+    final s = _setup((o) => o.path == '/auth/refresh'
+        ? (status: 503, body: {'detail': 'busy'})
+        : (status: 401, body: {'detail': 'Invalid or expired token'}));
+    await s.storage.save(const TokenPair(accessToken: 'A1', refreshToken: 'R1'));
+    await expectLater(AuthRepository(s.client, UserRole.customer).me(), throwsA(isA<ApiException>()));
+    expect((await s.storage.read())!.refreshToken, 'R1');
+  });
+
+  test('requests have a receive timeout so a stalled server cannot spin forever', () {
+    final s = _setup((o) => (status: 200, body: {}));
+    expect(s.client.dio.options.receiveTimeout, isNotNull);
+  });
+
   test('network failure becomes an ApiException with a friendly message', () async {
     final storage = MemoryTokenStorage();
     final client = ApiClient(

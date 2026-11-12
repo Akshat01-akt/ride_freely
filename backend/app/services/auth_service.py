@@ -7,7 +7,8 @@ from app.core.security import (
     create_token,
     decode_token,
     hash_password,
-    verify_password,
+    hash_password_async,
+    verify_password_async,
 )
 from app.models.customer import CustomerProfile
 from app.models.driver import DriverProfile
@@ -41,7 +42,7 @@ async def _create_user(session: AsyncSession, data: CustomerRegister, role: Role
         full_name=data.full_name,
         phone=data.phone,
         email=data.email,
-        password_hash=hash_password(data.password),
+        password_hash=await hash_password_async(data.password),
         role=role,
     )
     session.add(user)
@@ -87,7 +88,7 @@ async def register_driver(session: AsyncSession, data: DriverRegister) -> User:
 async def authenticate(session: AsyncSession, phone: str, password: str, role: Role) -> User:
     user = await session.scalar(select(User).where(User.phone == phone))
     hashed = user.password_hash if user is not None else _DUMMY_HASH
-    password_ok = verify_password(password, hashed)
+    password_ok = await verify_password_async(password, hashed)
     if user is None or not password_ok or user.role != role or not user.is_active:
         raise InvalidCredentials
     return user

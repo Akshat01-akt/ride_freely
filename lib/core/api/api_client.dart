@@ -9,8 +9,8 @@ import 'api_exception.dart';
 /// Dio wrapper that attaches the bearer token and refreshes it once on a 401.
 class ApiClient {
   ApiClient({required String baseUrl, required this.storage, HttpClientAdapter? adapter})
-      : dio = Dio(BaseOptions(baseUrl: baseUrl, connectTimeout: const Duration(seconds: 10))),
-        _refreshDio = Dio(BaseOptions(baseUrl: baseUrl, connectTimeout: const Duration(seconds: 10))) {
+      : dio = Dio(BaseOptions(baseUrl: baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 20))),
+        _refreshDio = Dio(BaseOptions(baseUrl: baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 20))) {
     if (adapter != null) {
       dio.httpClientAdapter = adapter;
       _refreshDio.httpClientAdapter = adapter;
@@ -61,8 +61,10 @@ class ApiClient {
       );
       await storage.save(TokenPair.fromJson(res.data!));
       return true;
-    } on DioException {
-      await storage.clear();
+    } on DioException catch (e) {
+      // Only a definite rejection ends the session; a timeout or 5xx must not log the user out.
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403) await storage.clear();
       return false;
     }
   }

@@ -6,15 +6,16 @@ from typing import Annotated
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
 
+_INDIAN_MOBILE = re.compile(r"(?:\+91|91|0)?([6-9][0-9]{9})", re.ASCII)
+
+
 def normalize_phone(value: str) -> str:
+    """Accept an Indian mobile number in common spellings; store one canonical +91XXXXXXXXXX form."""
     cleaned = re.sub(r"[\s\-]", "", value)
-    if re.fullmatch(r"\+\d{10,15}", cleaned):
-        return cleaned
-    if re.fullmatch(r"\d{10}", cleaned):
-        return f"+91{cleaned}"
-    if re.fullmatch(r"91\d{10}", cleaned):
-        return f"+{cleaned}"
-    raise ValueError("Enter a valid phone number")
+    match = _INDIAN_MOBILE.fullmatch(cleaned)
+    if match is None:
+        raise ValueError("Enter a valid 10-digit Indian mobile number")
+    return f"+91{match.group(1)}"
 
 
 Phone = Annotated[str, AfterValidator(normalize_phone)]

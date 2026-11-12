@@ -19,6 +19,14 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _route() async {
+    try {
+      await _decideRoute();
+    } catch (_) {
+      Get.offAllNamed(Routes.role);
+    }
+  }
+
+  Future<void> _decideRoute() async {
     final role = await Get.find<RoleStore>().read();
     if (role == null) {
       Get.offAllNamed(Routes.role);

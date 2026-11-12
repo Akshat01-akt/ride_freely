@@ -35,6 +35,13 @@ void main() {
     expect(c.status.value, AuthStatus.unauthenticated);
   });
 
+  test('bootstrap survives a storage failure and lands unauthenticated', () async {
+    final client = ApiClient(baseUrl: 'http://test', storage: _ThrowingStorage(), adapter: FakeAdapter((o) => (status: 200, body: {})));
+    final c = AuthController(AuthRepository(client, UserRole.customer));
+    await c.bootstrap();
+    expect(c.status.value, AuthStatus.unauthenticated);
+  });
+
   test('failed login sets the error and stays unauthenticated', () async {
     final c = _controller((o) => (status: 401, body: {'detail': 'Invalid phone or password'}), MemoryTokenStorage());
     final ok = await c.login('+919876543210', 'nope-nope');
@@ -62,4 +69,13 @@ void main() {
     expect(c.status.value, AuthStatus.unauthenticated);
     expect(await storage.read(), isNull);
   });
+}
+
+class _ThrowingStorage implements TokenStorage {
+  @override
+  Future<void> clear() async => throw StateError('keystore unavailable');
+  @override
+  Future<TokenPair?> read() async => throw StateError('keystore unavailable');
+  @override
+  Future<void> save(TokenPair tokens) async => throw StateError('keystore unavailable');
 }

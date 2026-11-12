@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:ride_freely/app.dart';
 import 'package:ride_freely/core/core.dart';
 import 'package:ride_freely/features/auth/login_page.dart';
@@ -8,6 +9,11 @@ import 'package:ride_freely/features/driver/driver_home_shell.dart';
 import 'package:ride_freely/features/role_select/role_select_page.dart';
 
 import '../fakes.dart';
+
+class _BrokenRoleStore extends MemoryRoleStore {
+  @override
+  Future<UserRole?> read() async => throw StateError('keystore unavailable');
+}
 
 Future<void> _pump(WidgetTester t, Fakes f) async {
   f.install();
@@ -59,6 +65,16 @@ void main() {
     await _pump(t, Fakes(storedRole: UserRole.customer));
     expect(find.byType(LoginPage), findsOneWidget);
     expect(find.textContaining('Our driver'), findsOneWidget);
+  });
+
+  testWidgets('a failing role store does not strand the user on the splash screen', (t) async {
+    final f = Fakes();
+    f.install();
+    Get.delete<RoleStore>(force: true);
+    Get.put<RoleStore>(_BrokenRoleStore());
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
+    expect(find.byType(RoleSelectPage), findsOneWidget);
   });
 
   testWidgets('switching account type returns to the role choice and forgets the role', (t) async {
