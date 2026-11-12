@@ -28,7 +28,10 @@ TEST_URL = f"postgresql+asyncpg://app_user:{PASSWORD}@{DB_HOST}:{DB_PORT}/{TEST_
 # Must be set before the app is imported anywhere.
 os.environ["DATABASE_URL"] = TEST_URL
 os.environ["SECRET_KEY"] = "test-secret-key-test-secret-key-0123456789"
-os.environ.setdefault("REDIS_URL", "redis://127.0.0.1:6379/0")
+os.environ["REDIS_URL"] = os.environ.get("TEST_REDIS_URL", "redis://127.0.0.1:6390/15")
+import tempfile  # noqa: E402
+
+os.environ["UPLOAD_DIR"] = tempfile.mkdtemp(prefix="ride_uploads_")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -63,8 +66,17 @@ async def db_session():
         yield session
     async with engine.begin() as conn:
         await conn.exec_driver_sql(
-            "TRUNCATE driver_profiles, customer_profiles, users RESTART IDENTITY CASCADE"
+            "TRUNCATE driver_locations, driver_documents, driver_profiles, customer_profiles, users RESTART IDENTITY CASCADE"
         )
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _clean_redis():
+    from app.core.redis import get_redis
+
+    await get_redis().flushdb()
+    yield
+    await get_redis().flushdb()
 
 
 @pytest_asyncio.fixture

@@ -18,6 +18,8 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:6390:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -29,6 +31,8 @@ services:
   api:
     build: ./backend
     env_file: .env
+    volumes:
+      - uploads_data:/srv/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -55,3 +59,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:

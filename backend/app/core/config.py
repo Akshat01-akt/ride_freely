@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str = "redis://localhost:6379/0"
     secret_key: str
+    upload_dir: str = "/srv/uploads"
     access_token_minutes: int = 30
     refresh_token_days: int = 7
 
