@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictInt
 
 from app.models.booking import BookingStatus, BookingType
 
@@ -28,6 +28,12 @@ class BookingCreate(BaseModel):
     notes: Annotated[str, Field(max_length=500)] | None = None
 
 
+class RatingIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rating: Annotated[StrictInt, Field(ge=1, le=5)]
+
+
 class PartyOut(BaseModel):
     id: uuid.UUID | None = None
     name: str
@@ -45,5 +51,6 @@ class BookingOut(BaseModel):
     pickup_address: str
     notes: str | None
     expires_at: datetime
+    rating: int | None = None
     driver: PartyOut
     customer: PartyOut

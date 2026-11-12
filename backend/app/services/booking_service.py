@@ -268,6 +268,32 @@ async def complete(session: AsyncSession, booking_id: uuid.UUID, driver_id: uuid
     # GPS sharing stopped during the trip, so the driver goes online again themselves.
     if driver.availability_status == AvailabilityStatus.ON_TRIP:
         driver.availability_status = AvailabilityStatus.OFFLINE
+    booking.completed_at = datetime.now(UTC)
+    await session.commit()
+    return booking
+
+
+class AlreadyRated(BookingError):
+    pass
+
+
+async def rate(session: AsyncSession, booking_id: uuid.UUID, customer_id: uuid.UUID, value: int) -> Booking:
+    """Rate a completed trip once; the driver's rating becomes the average of all their rated trips."""
+    booking = await _locked(session, booking_id, customer_id, None)
+    if booking.status != BookingStatus.COMPLETED:
+        await session.rollback()
+        raise IllegalTransition
+    if booking.rating is not None:
+        await session.rollback()
+        raise AlreadyRated
+    booking.rating = value
+    booking.rated_at = datetime.now(UTC)
+    driver = await session.get(DriverProfile, booking.driver_id, with_for_update=True, populate_existing=True)
+    await session.flush()
+    average = await session.scalar(
+        select(func.avg(Booking.rating)).where(Booking.driver_id == booking.driver_id, Booking.rating.is_not(None))
+    )
+    driver.rating = Decimal(average).quantize(Decimal("0.01"))
     await session.commit()
     return booking
 
@@ -313,6 +339,7 @@ async def describe(session: AsyncSession, bookings: list[Booking]) -> list[dict]
                 "pickup_address": b.pickup_address,
                 "notes": b.notes,
                 "expires_at": b.expires_at,
+                "rating": b.rating,
                 "driver": {"id": b.driver_id, "name": d_user.full_name, **({"phone": d_user.phone} if share else {})},
                 "customer": {"name": c_user.full_name, **({"phone": c_user.phone} if share else {})},
             }

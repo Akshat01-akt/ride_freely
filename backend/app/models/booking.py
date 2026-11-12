@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, func, text
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Integer, Numeric, SmallInteger, String, func, text
 from sqlalchemy.dialects.postgresql import UUID, ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -45,6 +45,7 @@ class Booking(Base):
             where=text("status IN ('REQUESTED', 'ACCEPTED', 'IN_PROGRESS')"),
             name="bookings_no_driver_overlap",
         ),
+        CheckConstraint("rating BETWEEN 1 AND 5", name="bookings_rating_range"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -61,5 +62,8 @@ class Booking(Base):
         _enum(BookingStatus), default=BookingStatus.REQUESTED, server_default="REQUESTED"
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rating: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    rated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

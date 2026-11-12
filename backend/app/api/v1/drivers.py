@@ -13,6 +13,7 @@ from app.schemas.auth import AvailabilityRequest, DocumentOut, DriverOut
 from app.core.redis import get_redis
 from app.services import document_service as docs
 from app.services import review_service
+from app.services.earnings_service import driver_earnings
 from app.services.storage import FileStorage, get_storage
 
 router = APIRouter(prefix="/drivers", tags=["drivers"])
@@ -35,6 +36,11 @@ async def me(user: User = Depends(require_role(Role.DRIVER)), session: AsyncSess
         availability_status=profile.availability_status,
         rating=profile.rating,
     )
+
+
+@router.get("/earnings")
+async def earnings(profile: DriverProfile = Depends(get_driver_profile), session: AsyncSession = Depends(get_session)):
+    return await driver_earnings(session, profile.id)
 
 
 @router.post("/documents", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)

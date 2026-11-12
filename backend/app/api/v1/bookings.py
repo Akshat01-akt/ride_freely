@@ -10,7 +10,7 @@ from app.core.database import get_session
 from app.models.customer import CustomerProfile
 from app.models.driver import DriverProfile
 from app.models.user import Role, User
-from app.schemas.booking import BookingCreate, BookingOut
+from app.schemas.booking import BookingCreate, BookingOut, RatingIn
 from app.services import booking_service as bs
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
@@ -58,6 +58,7 @@ def _translate(exc: bs.BookingError) -> HTTPException:
         bs.DriverUnavailable: "This driver is not available for that time",
         bs.SlotTaken: "The driver already has a booking at that time",
         bs.TooManyBookings: "You already have 3 active bookings. Finish or cancel one first",
+        bs.AlreadyRated: "You have already rated this trip",
         bs.IllegalTransition: "This booking cannot be changed that way right now",
     }
     return HTTPException(status.HTTP_409_CONFLICT, messages.get(type(exc), "Conflict"))
@@ -98,6 +99,14 @@ async def read(booking_id: uuid.UUID, who: dict = Depends(_either), session: Asy
 async def cancel(booking_id: uuid.UUID, customer: CustomerProfile = Depends(_customer), session: AsyncSession = Depends(get_session)):
     try:
         return await _one(session, await bs.cancel(session, booking_id, customer.id))
+    except bs.BookingError as exc:
+        raise _translate(exc) from None
+
+
+@router.post("/{booking_id}/rating", response_model=BookingOut, response_model_exclude_none=True)
+async def rate(booking_id: uuid.UUID, payload: RatingIn, customer: CustomerProfile = Depends(_customer), session: AsyncSession = Depends(get_session)):
+    try:
+        return await _one(session, await bs.rate(session, booking_id, customer.id, payload.rating))
     except bs.BookingError as exc:
         raise _translate(exc) from None
 
