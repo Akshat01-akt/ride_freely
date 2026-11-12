@@ -53,3 +53,45 @@ async def record_location(
                     "accuracy": accuracy, "recorded_at": now.isoformat()}),
         ex=LOCATION_TTL_SECONDS,
     )
+
+
+MAX_RESULTS = 50
+
+
+async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, longitude: float, radius_m: float) -> list[dict]:
+    """Verified, available drivers within [radius_m] metres, nearest first, whose live location is still fresh."""
+    rows = (
+        await session.execute(
+            text(
+                """
+                WITH here AS (SELECT ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography AS p)
+                SELECT dp.id, u.full_name, dp.hourly_rate, dp.rating, dp.experience_years,
+                       ST_Distance(l.location, here.p) AS distance
+                FROM here, driver_locations l
+                JOIN driver_profiles dp ON dp.id = l.driver_id
+                JOIN users u ON u.id = dp.user_id
+                WHERE dp.verification_status = 'APPROVED' AND dp.availability_status = 'AVAILABLE'
+                  AND u.is_active AND ST_DWithin(l.location, here.p, :radius)
+                ORDER BY distance
+                LIMIT :limit
+                """
+            ),
+            {"lat": latitude, "lng": longitude, "radius": radius_m, "limit": MAX_RESULTS},
+        )
+    ).all()
+    if not rows:
+        return []
+    fresh = await redis.mget([location_key(r.id) for r in rows])
+    return [
+        {
+            "id": r.id,
+            "name": r.full_name,
+            "hourly_rate": r.hourly_rate,
+            "rating": r.rating,
+            "experience_years": r.experience_years,
+            "verified": True,
+            "distance_meters": round(float(r.distance), 1),
+        }
+        for r, live in zip(rows, fresh, strict=True)
+        if live is not None
+    ]

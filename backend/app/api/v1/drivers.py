@@ -1,5 +1,5 @@
 from redis.asyncio import Redis
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +8,7 @@ from app.core.database import get_session
 from app.models.document import DocType, DriverDocument
 from app.models.driver import AvailabilityStatus, DriverProfile
 from app.models.user import Role, User
+from app.services.location_service import nearby_drivers
 from app.schemas.auth import AvailabilityRequest, DocumentOut, DriverOut
 from app.core.redis import get_redis
 from app.services import document_service as docs
@@ -74,3 +75,15 @@ async def set_availability(
     except review_service.StateLocked:
         raise HTTPException(status.HTTP_409_CONFLICT, "You cannot change your availability right now") from None
     return {"availability_status": profile.availability_status, "verification_status": profile.verification_status}
+
+
+@router.get("/nearby")
+async def nearby(
+    latitude: float = Query(ge=-90, le=90, allow_inf_nan=False),
+    longitude: float = Query(ge=-180, le=180, allow_inf_nan=False),
+    radius: float = Query(default=5000, gt=0, le=20000, allow_inf_nan=False),
+    _: User = Depends(require_role(Role.CUSTOMER)),
+    session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
+):
+    return {"drivers": await nearby_drivers(session, redis, latitude, longitude, radius)}
