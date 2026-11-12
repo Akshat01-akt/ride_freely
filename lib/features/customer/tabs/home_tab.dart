@@ -17,30 +17,11 @@ class HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = authFor(UserRole.customer);
     final drivers = Get.find<DriversController>();
-    final text = Theme.of(context).textTheme;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         FadeSlideIn(
-          child: Obx(() {
-            final name = '${auth.profile['full_name'] ?? ''}';
-            return Row(
-              children: [
-                InitialsAvatar(name: name, size: 48, ring: true),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Hello, ${name.split(' ').first}', style: text.titleLarge),
-                      const SizedBox(height: 2),
-                      Text('Where do you need a driver today?', style: text.bodyMedium),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          }),
+          child: Obx(() => DayPartCard(name: '${auth.profile['full_name'] ?? ''}')),
         ),
         const SizedBox(height: 18),
         FadeSlideIn(

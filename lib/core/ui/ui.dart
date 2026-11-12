@@ -3,6 +3,7 @@ export 'app_button.dart';
 export 'app_text_field.dart';
 export 'brand_logo.dart';
 export 'components.dart';
+export 'day_scene.dart';
 export 'fade_slide_in.dart';
 export 'illustrations.dart';
 export 'motion.dart';

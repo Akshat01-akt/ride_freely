@@ -25,7 +25,13 @@ Future<void> _pump(WidgetTester t, {List<DriverSummary> drivers = const [], Wall
 }
 
 Future<void> _openDrivers(WidgetTester t) async {
-  await t.tap(find.text('Book now').first);
+  final target = find.text('Book now').first;
+  // The greeting card pushes the banner below the fold on a small phone; scroll until it can be tapped.
+  for (var i = 0; i < 6 && target.hitTestable().evaluate().isEmpty; i++) {
+    await t.drag(find.byType(ListView).first, const Offset(0, -200));
+    await t.pumpAndSettle();
+  }
+  await t.tap(target);
   await t.pumpAndSettle();
 }
 

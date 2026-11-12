@@ -21,25 +21,52 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
     final auth = authFor(UserRole.driver);
     final tabs = <Widget>[
       _DashboardTab(auth: auth),
-      const EmptyState(icon: Icons.notifications_none_rounded, title: 'No requests yet', body: 'Booking requests from nearby customers will show up here.'),
-      const EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'Nothing earned yet', body: 'Your daily, weekly and monthly totals will appear here.'),
+      const EmptyState(
+        icon: Icons.notifications_none_rounded,
+        title: 'No requests yet',
+        body: 'Booking requests from nearby customers will show up here.',
+      ),
+      const EmptyState(
+        icon: Icons.account_balance_wallet_outlined,
+        title: 'Nothing earned yet',
+        body: 'Your daily, weekly and monthly totals will appear here.',
+      ),
       _ProfileTab(auth: auth),
     ];
     return Scaffold(
       body: AnimatedGradientBackground(
-        child: SafeArea(
-          bottom: false,
-          child: AnimatedTabSwitcher(index: _index, builder: (i) => tabs[i]),
+        child: FloatingIconsBackground(
+          dark: true,
+          child: SafeArea(
+            bottom: false,
+            child: AnimatedTabSwitcher(index: _index, builder: (i) => tabs[i]),
+          ),
         ),
       ),
       bottomNavigationBar: AppBottomNav(
         index: _index,
         onChanged: (i) => setState(() => _index = i),
         items: const [
-          NavItem(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
-          NavItem(Icons.notifications_none_rounded, Icons.notifications_rounded, 'Requests'),
-          NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Earnings'),
-          NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+          NavItem(
+            Icons.dashboard_outlined,
+            Icons.dashboard_rounded,
+            'Dashboard',
+          ),
+          NavItem(
+            Icons.notifications_none_rounded,
+            Icons.notifications_rounded,
+            'Requests',
+          ),
+          NavItem(
+            Icons.account_balance_wallet_outlined,
+            Icons.account_balance_wallet_rounded,
+            'Earnings',
+          ),
+          NavItem(
+            Icons.person_outline_rounded,
+            Icons.person_rounded,
+            'Profile',
+          ),
         ],
       ),
     );
@@ -63,7 +90,9 @@ class _DashboardTabState extends State<_DashboardTab> {
     super.initState();
     // If the server still has this driver AVAILABLE (app was restarted), keep sharing the position.
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _availability.resumeIfAvailable('${widget.auth.profile['availability_status']}'),
+      (_) => _availability.resumeIfAvailable(
+        '${widget.auth.profile['availability_status']}',
+      ),
     );
   }
 
@@ -77,25 +106,15 @@ class _DashboardTabState extends State<_DashboardTab> {
       return ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
-          FadeSlideIn(
-            child: Row(
-              children: [
-                InitialsAvatar(name: name, size: 48, ring: true),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Hello, ${name.split(' ').first}', style: text.titleLarge),
-                      Text('Ready for your next booking?', style: text.bodyMedium?.copyWith(color: AppColors.beige)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          FadeSlideIn(child: DayPartCard(name: name)),
           const SizedBox(height: 20),
-          if (!approved) FadeSlideIn(delay: const Duration(milliseconds: 60), child: _VerificationBanner(onUpload: () => Get.toNamed(Routes.documents))),
+          if (!approved)
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 60),
+              child: _VerificationBanner(
+                onUpload: () => Get.toNamed(Routes.documents),
+              ),
+            ),
           FadeSlideIn(
             delay: const Duration(milliseconds: 120),
             child: Obx(() {
@@ -108,7 +127,14 @@ class _DashboardTabState extends State<_DashboardTab> {
                   gradient: online ? AppGradients.fuchsia : null,
                   color: online ? null : AppColors.graphite,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
-                  boxShadow: online ? softShadow(color: AppColors.fuchsia, alpha: 0.35, blur: 28, y: 14) : softShadow(alpha: 0.3),
+                  boxShadow: online
+                      ? softShadow(
+                          color: AppColors.fuchsia,
+                          alpha: 0.35,
+                          blur: 28,
+                          y: 14,
+                        )
+                      : softShadow(alpha: 0.3),
                 ),
                 child: Row(
                   children: [
@@ -118,24 +144,39 @@ class _DashboardTabState extends State<_DashboardTab> {
                         children: [
                           AnimatedSwitcher(
                             duration: AppMotion.tap,
-                            child: Text(online ? 'You are online' : 'You are offline', key: ValueKey(online), style: text.titleLarge),
+                            child: Text(
+                              online ? 'You are online' : 'You are offline',
+                              key: ValueKey(online),
+                              style: text.titleLarge,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             online
                                 ? 'Customers nearby can see you. Keep the app open to stay visible.'
                                 : approved
-                                    ? 'Go online to receive booking requests.'
-                                    : 'Available once your documents are approved.',
-                            style: TextStyle(color: AppColors.cream.withValues(alpha: 0.8), height: 1.35),
+                                ? 'Go online to receive booking requests.'
+                                : 'Available once your documents are approved.',
+                            style: TextStyle(
+                              color: AppColors.cream.withValues(alpha: 0.8),
+                              height: 1.35,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     if (_availability.busy.value)
-                      const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      )
                     else
-                      Switch(value: online, activeThumbColor: AppColors.cream, onChanged: approved ? _availability.setOnline : null),
+                      Switch(
+                        value: online,
+                        activeThumbColor: AppColors.cream,
+                        onChanged: approved ? _availability.setOnline : null,
+                      ),
                   ],
                 ),
               );
@@ -146,16 +187,43 @@ class _DashboardTabState extends State<_DashboardTab> {
             final w = _availability.warning.value;
             return w == null
                 ? const SizedBox.shrink()
-                : Padding(padding: const EdgeInsets.only(top: 8), child: Text(w, style: const TextStyle(color: AppColors.beige)));
+                : Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      w,
+                      style: const TextStyle(color: AppColors.beige),
+                    ),
+                  );
           }),
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: FadeSlideIn(delay: const Duration(milliseconds: 180), child: _Stat(label: 'Hourly rate', value: '₹${p['hourly_rate'] ?? '-'}'))),
+              Expanded(
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 180),
+                  child: _Stat(
+                    label: 'Hourly rate',
+                    value: '₹${p['hourly_rate'] ?? '-'}',
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: FadeSlideIn(delay: const Duration(milliseconds: 240), child: _Stat(label: 'Experience', value: '${p['experience_years'] ?? '-'} yrs'))),
+              Expanded(
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 240),
+                  child: _Stat(
+                    label: 'Experience',
+                    value: '${p['experience_years'] ?? '-'} yrs',
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: FadeSlideIn(delay: const Duration(milliseconds: 300), child: _Stat(label: 'Rating', value: '${p['rating'] ?? '-'}'))),
+              Expanded(
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 300),
+                  child: _Stat(label: 'Rating', value: '${p['rating'] ?? '-'}'),
+                ),
+              ),
             ],
           ),
         ],
@@ -171,29 +239,46 @@ class _VerificationBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(AppRadius.md)),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.hourglass_top_rounded, color: AppColors.fuchsia),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Verification pending', style: TextStyle(color: AppColors.black, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 2),
-                  const Text('Upload your licence and ID proof. You can go online once our team approves them.', style: TextStyle(color: AppColors.charcoal, height: 1.35)),
-                  const SizedBox(height: 10),
-                  AppButton(label: 'Upload documents', compact: true, icon: Icons.upload_file_rounded, onPressed: onUpload),
-                ],
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.beige,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.hourglass_top_rounded, color: AppColors.fuchsia),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Verification pending',
+                style: TextStyle(
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              const Text(
+                'Upload your licence and ID proof. You can go online once our team approves them.',
+                style: TextStyle(color: AppColors.charcoal, height: 1.35),
+              ),
+              const SizedBox(height: 10),
+              AppButton(
+                label: 'Upload documents',
+                compact: true,
+                icon: Icons.upload_file_rounded,
+                onPressed: onUpload,
+              ),
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _Stat extends StatelessWidget {
@@ -204,17 +289,31 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: AppColors.graphite, borderRadius: BorderRadius.circular(AppRadius.md), boxShadow: softShadow(alpha: 0.25, blur: 16, y: 8)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.cream)),
-            const SizedBox(height: 2),
-            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.beige)),
-          ],
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: AppColors.graphite,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      boxShadow: softShadow(alpha: 0.25, blur: 16, y: 8),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppColors.cream,
+          ),
         ),
-      );
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.beige),
+        ),
+      ],
+    ),
+  );
 }
 
 class _ProfileTab extends StatelessWidget {
@@ -229,8 +328,14 @@ class _ProfileTab extends StatelessWidget {
         title: const Text('Log out?'),
         content: const Text('You will stop receiving booking requests.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Stay')),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Log out')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Log out'),
+          ),
         ],
       ),
     );
@@ -245,25 +350,40 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-        children: [
-          FadeSlideIn(
-            child: Obx(
-              () => Column(
-                children: [
-                  InitialsAvatar(name: '${auth.profile['full_name'] ?? ''}', size: 88, ring: true),
-                  const SizedBox(height: 14),
-                  Text('${auth.profile['full_name'] ?? ''}', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 2),
-                  Text('${auth.profile['phone'] ?? ''}'),
-                  const SizedBox(height: 2),
-                  Text('Licence ${auth.profile['licence_number'] ?? ''}'),
-                ],
+    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+    children: [
+      FadeSlideIn(
+        child: Obx(
+          () => Column(
+            children: [
+              InitialsAvatar(
+                name: '${auth.profile['full_name'] ?? ''}',
+                size: 88,
+                ring: true,
               ),
-            ),
+              const SizedBox(height: 14),
+              Text(
+                '${auth.profile['full_name'] ?? ''}',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 2),
+              Text('${auth.profile['phone'] ?? ''}'),
+              const SizedBox(height: 2),
+              Text('Licence ${auth.profile['licence_number'] ?? ''}'),
+            ],
           ),
-          const SizedBox(height: 24),
-          FadeSlideIn(delay: const Duration(milliseconds: 100), child: MenuTile(icon: Icons.logout_rounded, title: 'Log out', danger: true, onTap: () => _confirmLogout(context))),
-        ],
-      );
+        ),
+      ),
+      const SizedBox(height: 24),
+      FadeSlideIn(
+        delay: const Duration(milliseconds: 100),
+        child: MenuTile(
+          icon: Icons.logout_rounded,
+          title: 'Log out',
+          danger: true,
+          onTap: () => _confirmLogout(context),
+        ),
+      ),
+    ],
+  );
 }

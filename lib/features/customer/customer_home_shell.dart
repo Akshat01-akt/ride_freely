@@ -39,21 +39,30 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> {
     return Scaffold(
       body: AnimatedGradientBackground(
         dark: false,
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              if (kUiPreview)
-                Container(
-                  width: double.infinity,
-                  color: AppColors.charcoal,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: const Text('UI preview: sample content', textAlign: TextAlign.center, style: TextStyle(color: AppColors.cream, fontSize: 11.5)),
+        child: FloatingIconsBackground(
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                if (kUiPreview)
+                  Container(
+                    width: double.infinity,
+                    color: AppColors.charcoal,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: const Text(
+                      'UI preview: sample content',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.cream, fontSize: 11.5),
+                    ),
+                  ),
+                Expanded(
+                  child: AnimatedTabSwitcher(
+                    index: _index,
+                    builder: (i) => tabs[i],
+                  ),
                 ),
-              Expanded(
-                child: AnimatedTabSwitcher(index: _index, builder: (i) => tabs[i]),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -62,9 +71,21 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> {
         onChanged: (i) => setState(() => _index = i),
         items: const [
           NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
-          NavItem(Icons.event_note_outlined, Icons.event_note_rounded, 'Bookings'),
-          NavItem(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Wallet'),
-          NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+          NavItem(
+            Icons.event_note_outlined,
+            Icons.event_note_rounded,
+            'Bookings',
+          ),
+          NavItem(
+            Icons.account_balance_wallet_outlined,
+            Icons.account_balance_wallet_rounded,
+            'Wallet',
+          ),
+          NavItem(
+            Icons.person_outline_rounded,
+            Icons.person_rounded,
+            'Profile',
+          ),
         ],
       ),
     );
