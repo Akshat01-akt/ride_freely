@@ -185,7 +185,7 @@ Local and initial hosting both use Docker Compose: `db`, `redis`, `api`, `worker
 ## 14. Testing strategy
 
 - Backend: pytest with httpx against a real PostGIS test database; concurrency tests for double booking; webhook idempotency tests.
-- Flutter: unit tests for `ride_core`, widget tests for each app's auth flow, `integration_test` for end-to-end journeys later.
+- Flutter: unit tests for `lib/core`, widget tests for the role choice and each interface's auth flow, `integration_test` for end-to-end journeys later.
 - Load: Locust or k6 on nearby search and booking creation.
 
 ## 15. Security and privacy summary
