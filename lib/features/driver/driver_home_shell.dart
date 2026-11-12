@@ -6,6 +6,7 @@ import '../../routes.dart';
 import '../auth/auth_scaffold.dart';
 import '../bookings/bookings.dart';
 import 'availability_controller.dart';
+import 'earnings.dart';
 import 'requests_tab.dart';
 
 class DriverHomeShell extends StatefulWidget {
@@ -32,11 +33,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
     final tabs = <Widget>[
       _DashboardTab(auth: auth),
       const RequestsTab(),
-      const EmptyState(
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'Nothing earned yet',
-        body: 'Your daily, weekly and monthly totals will appear here.',
-      ),
+      const EarningsTab(),
       _ProfileTab(auth: auth),
     ];
     return Scaffold(
@@ -55,6 +52,8 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
           setState(() => _index = i);
           if (i == 1) {
             bookingsFor(UserRole.driver).load(keepItems: true);
+          } else if (i == 2) {
+            Get.find<EarningsController>().load();
           }
         },
         items: const [

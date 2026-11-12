@@ -21,7 +21,43 @@ class DriverDocument {
   final String? note;
 }
 
+class EarningsPeriod {
+  const EarningsPeriod({required this.trips, required this.amount});
+
+  factory EarningsPeriod.fromJson(Map<String, dynamic> j) => EarningsPeriod(trips: (j['trips'] as num).toInt(), amount: j['amount'].toString());
+
+  final int trips;
+
+  /// Money stays text exactly as the server sent it.
+  final String amount;
+}
+
+/// Completed-trip counts and booking totals. These are booking prices, not payouts.
+class Earnings {
+  const Earnings({required this.today, required this.week, required this.month, required this.total});
+
+  factory Earnings.fromJson(Map<String, dynamic> j) => Earnings(
+        today: EarningsPeriod.fromJson(j['today'] as Map<String, dynamic>),
+        week: EarningsPeriod.fromJson(j['week'] as Map<String, dynamic>),
+        month: EarningsPeriod.fromJson(j['month'] as Map<String, dynamic>),
+        total: EarningsPeriod.fromJson(j['total'] as Map<String, dynamic>),
+      );
+
+  static const empty = Earnings(
+    today: EarningsPeriod(trips: 0, amount: '0.00'),
+    week: EarningsPeriod(trips: 0, amount: '0.00'),
+    month: EarningsPeriod(trips: 0, amount: '0.00'),
+    total: EarningsPeriod(trips: 0, amount: '0.00'),
+  );
+
+  final EarningsPeriod today;
+  final EarningsPeriod week;
+  final EarningsPeriod month;
+  final EarningsPeriod total;
+}
+
 abstract class DriverApi {
+  Future<Earnings> earnings();
   Future<void> setAvailability(bool online);
   Future<void> sendLocation(GeoPoint point);
   Future<List<DriverDocument>> documents();
@@ -32,6 +68,9 @@ class HttpDriverApi implements DriverApi {
   HttpDriverApi(this._client);
 
   final ApiClient _client;
+
+  @override
+  Future<Earnings> earnings() async => Earnings.fromJson(await _client.getJson('/drivers/earnings'));
 
   @override
   Future<void> setAvailability(bool online) =>

@@ -13,7 +13,9 @@ class RequestsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final bookings = bookingsFor(UserRole.driver);
     final text = Theme.of(context).textTheme;
-    return Obx(() {
+    return PollWhileVisible(
+      controller: bookings,
+      child: Obx(() {
       if (bookings.loading.value && bookings.items.isEmpty) {
         return ListView(
           padding: const EdgeInsets.all(20),
@@ -74,6 +76,7 @@ class RequestsTab extends StatelessWidget {
           ],
         ),
       );
-    });
+    }),
+    );
   }
 }

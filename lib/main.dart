@@ -9,6 +9,7 @@ import 'features/customer/data/sources.dart';
 import 'features/driver/availability_controller.dart';
 import 'features/driver/data/driver_api.dart';
 import 'features/driver/documents_controller.dart';
+import 'features/driver/earnings.dart';
 
 /// Fixes the backend address at build time. When empty the app uses a per-platform default,
 /// and debug builds can change it from the login screen.
@@ -78,6 +79,7 @@ Future<void> main() async {
     AvailabilityController(api, Get.find<LocationService>()),
     permanent: true,
   );
+  Get.put(EarningsController(api), permanent: true);
   Get.put(
     DocumentsController(api, Get.find<DocumentPicker>()),
     permanent: true,

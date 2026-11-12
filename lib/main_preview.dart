@@ -12,6 +12,7 @@ import 'features/customer/data/sources.dart';
 import 'features/driver/availability_controller.dart';
 import 'features/driver/data/driver_api.dart';
 import 'features/driver/documents_controller.dart';
+import 'features/driver/earnings.dart';
 import 'routes.dart';
 
 class _PreviewLocation implements LocationService {
@@ -24,6 +25,14 @@ class _PreviewLocation implements LocationService {
 }
 
 class _PreviewDriverApi implements DriverApi {
+  @override
+  Future<Earnings> earnings() async => const Earnings(
+    today: EarningsPeriod(trips: 2, amount: '360.00'),
+    week: EarningsPeriod(trips: 9, amount: '1620.00'),
+    month: EarningsPeriod(trips: 31, amount: '5580.00'),
+    total: EarningsPeriod(trips: 112, amount: '20160.00'),
+  );
+
   @override
   Future<void> setAvailability(bool online) async {}
 
@@ -103,6 +112,7 @@ void main() {
     AvailabilityController(api, Get.find<LocationService>()),
     permanent: true,
   );
+  Get.put(EarningsController(api), permanent: true);
   Get.put(
     DocumentsController(api, Get.find<DocumentPicker>()),
     permanent: true,

@@ -59,6 +59,7 @@ class Booking {
     this.notes,
     this.driverPhone,
     this.customerPhone,
+    this.rating,
   });
 
   factory Booking.fromJson(Map<String, dynamic> j) {
@@ -82,6 +83,7 @@ class Booking {
       driverPhone: driver['phone'] as String?,
       customerName: customer['name'] as String,
       customerPhone: customer['phone'] as String?,
+      rating: (j['rating'] as num?)?.toInt(),
     );
   }
 
@@ -102,6 +104,9 @@ class Booking {
   final String? driverPhone;
   final String customerName;
   final String? customerPhone;
+
+  /// Stars (1 to 5) the customer gave this trip, once rated.
+  final int? rating;
 }
 
 const _months = [

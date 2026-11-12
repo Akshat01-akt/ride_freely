@@ -9,6 +9,7 @@ import 'package:ride_freely/features/customer/data/models.dart';
 import 'package:ride_freely/features/driver/availability_controller.dart';
 import 'package:ride_freely/features/driver/data/driver_api.dart';
 import 'package:ride_freely/features/driver/documents_controller.dart';
+import 'package:ride_freely/features/driver/earnings.dart';
 import 'package:ride_freely/features/customer/data/sources.dart';
 
 /// Continuous animations never settle, so tests run with the OS reduce-motion setting on.
@@ -53,6 +54,9 @@ class FakeDriverApi implements DriverApi {
   ApiException? uploadError;
   ApiException? documentsError;
   List<DriverDocument> docs = const [];
+  Earnings earningsData = Earnings.empty;
+  ApiException? earningsError;
+  int earningsCalls = 0;
 
   /// When set, setAvailability / sendLocation wait for it, so tests can interleave calls.
   Completer<void>? availabilityGate;
@@ -70,6 +74,13 @@ class FakeDriverApi implements DriverApi {
     calls.add('sendLocation');
     await sendGate?.future;
     if (locationError != null) throw locationError!;
+  }
+
+  @override
+  Future<Earnings> earnings() async {
+    earningsCalls++;
+    if (earningsError != null) throw earningsError!;
+    return earningsData;
   }
 
   @override
@@ -138,6 +149,7 @@ class FakeBookingsApi implements BookingsApi {
     String? driverPhone,
     String? customerPhone,
     String? notes,
+    int? rating,
   }) => Booking(
     id: id,
     state: state,
@@ -154,6 +166,7 @@ class FakeBookingsApi implements BookingsApi {
     driverPhone: driverPhone,
     customerPhone: customerPhone,
     notes: notes,
+    rating: rating,
   );
 
   List<Booking> items;
@@ -164,6 +177,7 @@ class FakeBookingsApi implements BookingsApi {
   int listCalls = 0;
   Completer<void>? listGate;
   final created = <Map<String, Object?>>[];
+  final rated = <String>[];
   final actions = <String>[];
 
   @override
@@ -195,6 +209,16 @@ class FakeBookingsApi implements BookingsApi {
     final b = booking(id: 'new${created.length}');
     items = [b, ...items];
     return b;
+  }
+
+  @override
+  Future<Booking> rate(String id, int stars) async {
+    rated.add('$id:$stars');
+    if (actError != null) throw actError!;
+    final old = items.firstWhere((b) => b.id == id);
+    final updated = booking(id: id, state: old.state, driver: old.driverName, customer: old.customerName, rating: stars);
+    items = [for (final b in items) b.id == id ? updated : b];
+    return updated;
   }
 
   @override
@@ -311,6 +335,7 @@ class Fakes {
     WalletSource? wallet,
     FakeBookingsApi? customerBookings,
     FakeBookingsApi? driverBookings,
+    this.pollInterval = const Duration(hours: 1),
   }) : customerBookings = customerBookings ?? FakeBookingsApi(),
        driverBookings = driverBookings ?? FakeBookingsApi(),
        driverApi = driverApi ?? FakeDriverApi(),
@@ -323,6 +348,7 @@ class Fakes {
        roleStore = MemoryRoleStore(storedRole);
 
   final bool onboardingDone;
+  final Duration pollInterval;
   final FakeBookingsApi customerBookings;
   final FakeBookingsApi driverBookings;
   final FakeDriverApi driverApi;
@@ -359,8 +385,9 @@ class Fakes {
     Get.put(DocumentsController(driverApi, picker));
     Get.put(DriversController(driversSource));
     Get.put(WalletController(walletSource));
-    Get.put(BookingsController(customerBookings), tag: UserRole.customer.name);
-    Get.put(BookingsController(driverBookings), tag: UserRole.driver.name);
+    Get.put(BookingsController(customerBookings, pollInterval: pollInterval), tag: UserRole.customer.name);
+    Get.put(BookingsController(driverBookings, pollInterval: pollInterval), tag: UserRole.driver.name);
+    Get.put(EarningsController(driverApi));
     Get.put(AuthController(customer), tag: UserRole.customer.name);
     Get.put(AuthController(driver), tag: UserRole.driver.name);
   }

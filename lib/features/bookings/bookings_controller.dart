@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import '../../core/core.dart';
@@ -6,7 +8,11 @@ import 'bookings_api.dart';
 
 /// One per role (customer or driver): the signed-in person's bookings and the actions they may take.
 class BookingsController extends GetxController {
-  BookingsController(this._api);
+  BookingsController(this._api, {this.pollInterval = const Duration(seconds: 30)});
+
+  /// How often an open list reloads by itself. There is no server push yet.
+  final Duration pollInterval;
+  Timer? _timer;
 
   final BookingsApi _api;
   final items = <Booking>[].obs;
@@ -73,25 +79,48 @@ class BookingsController extends GetxController {
     }
   }
 
-  Future<bool> act(String id, BookingAction action) async {
+  Future<bool> act(String id, BookingAction action) => _run(id, () => _api.act(id, action));
+
+  Future<bool> rate(String id, int stars) => _run(id, () => _api.rate(id, stars));
+
+  Future<bool> _run(String id, Future<Booking> Function() call) async {
     if (actingId.value != null) return false;
     actingId.value = id;
     actionError.value = null;
     try {
-      final updated = await _api.act(id, action);
+      final updated = await call();
       final i = items.indexWhere((b) => b.id == id);
       if (i >= 0) items[i] = updated;
       return true;
     } catch (e) {
       actionError.value = _message(e);
       // The booking probably changed under us (expired, cancelled): show what it really is now.
-      await load(
-        keepItems: true,
-      ); // actingId stays set until this finishes, so no second tap sneaks in
+      await load(keepItems: true); // actingId stays set until this finishes, so no second tap sneaks in
       return false;
     } finally {
       actingId.value = null;
     }
+  }
+
+  /// Reloads every [pollInterval] while a list is on screen; skipped while something is loading or an action runs.
+  void startPolling() {
+    _timer?.cancel();
+    _timer = Timer.periodic(pollInterval, (_) {
+      if (actingId.value == null && !loading.value) {
+        load(keepItems: true);
+      }
+    });
+  }
+
+  void stopPolling() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void onClose() {
+    stopPolling();
+    super.onClose();
   }
 }
 

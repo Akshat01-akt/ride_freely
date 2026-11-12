@@ -7,12 +7,14 @@ class PreviewBookingsApi implements BookingsApi {
     : _items = [
         sample(id: 'p1'),
         sample(id: 'p2', state: BookingState.accepted, hoursFromNow: 30),
+        sample(id: 'p3', state: BookingState.completed, hoursFromNow: -48),
       ];
 
   static Booking sample({
     String id = 'p1',
     BookingState state = BookingState.requested,
     int hoursFromNow = 26,
+    int? rating,
   }) {
     final start = DateTime.now().toUtc().add(Duration(hours: hoursFromNow));
     return Booking(
@@ -30,6 +32,7 @@ class PreviewBookingsApi implements BookingsApi {
       customerName: 'Asha Rao',
       driverPhone: state == BookingState.accepted ? '+919800000001' : null,
       customerPhone: state == BookingState.accepted ? '+919800000002' : null,
+      rating: rating,
     );
   }
 
@@ -50,6 +53,14 @@ class PreviewBookingsApi implements BookingsApi {
     final b = sample(id: 'p${_items.length + 1}');
     _items = [b, ..._items];
     return b;
+  }
+
+  @override
+  Future<Booking> rate(String id, int stars) async {
+    final old = _items.firstWhere((b) => b.id == id);
+    final updated = sample(id: id, state: old.state, rating: stars);
+    _items = [for (final b in _items) b.id == id ? updated : b];
+    return updated;
   }
 
   @override

@@ -19,7 +19,9 @@ class _BookingsTabState extends State<BookingsTab> {
   @override
   Widget build(BuildContext context) {
     final bookings = bookingsFor(UserRole.customer);
-    return Padding(
+    return PollWhileVisible(
+      controller: bookings,
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,6 +119,7 @@ class _BookingsTabState extends State<BookingsTab> {
           ),
         ],
       ),
+    ),
     );
   }
 }

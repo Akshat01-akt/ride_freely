@@ -12,6 +12,7 @@ abstract class BookingsApi {
     String? notes,
   });
   Future<Booking> act(String id, BookingAction action);
+  Future<Booking> rate(String id, int stars);
 }
 
 class HttpBookingsApi implements BookingsApi {
@@ -51,4 +52,8 @@ class HttpBookingsApi implements BookingsApi {
       Booking.fromJson(
         await _client.postJson('/bookings/$id/${action.name}', {}),
       );
+
+  @override
+  Future<Booking> rate(String id, int stars) async =>
+      Booking.fromJson(await _client.postJson('/bookings/$id/rating', {'rating': stars}));
 }

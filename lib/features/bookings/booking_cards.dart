@@ -137,6 +137,11 @@ class BookingCard extends StatelessWidget {
     if (ok == true) await controller.act(booking.id, BookingAction.cancel);
   }
 
+  Future<void> _rate(BuildContext context) async {
+    final stars = await showDialog<int>(context: context, builder: (_) => const _RatingDialog());
+    if (stars != null) await controller.rate(booking.id, stars);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cancellable =
@@ -151,6 +156,25 @@ class BookingCard extends StatelessWidget {
           phone: booking.driverPhone,
           phoneLabel: 'Driver',
         ),
+        if (booking.state == BookingState.completed) ...[
+          const SizedBox(height: 12),
+          if (booking.rating != null)
+            Row(
+              children: [
+                for (var i = 1; i <= 5; i++) Icon(i <= booking.rating! ? Icons.star_rounded : Icons.star_outline_rounded, size: 20, color: AppColors.fuchsia),
+                const SizedBox(width: 8),
+                Flexible(child: Text('You rated ${booking.rating} ${booking.rating == 1 ? 'star' : 'stars'}')),
+              ],
+            )
+          else
+            Obx(() => AppButton(
+              label: 'Rate this trip',
+              compact: true,
+              icon: Icons.star_rounded,
+              loading: controller.actingId.value == booking.id,
+              onPressed: controller.actingId.value == null ? () => _rate(context) : null,
+            )),
+        ],
         if (cancellable) ...[
           const SizedBox(height: 12),
           Obx(
@@ -230,4 +254,35 @@ class RequestCard extends StatelessWidget {
       ],
     );
   }
+}
+
+class _RatingDialog extends StatefulWidget {
+  const _RatingDialog();
+
+  @override
+  State<_RatingDialog> createState() => _RatingDialogState();
+}
+
+class _RatingDialogState extends State<_RatingDialog> {
+  int _stars = 0;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('How was your trip?'),
+    content: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 1; i <= 5; i++)
+          IconButton(
+            tooltip: i == 1 ? '1 star' : '$i stars',
+            onPressed: () => setState(() => _stars = i),
+            icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: AppColors.fuchsia, size: 30),
+          ),
+      ],
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Not now')),
+      TextButton(onPressed: _stars == 0 ? null : () => Navigator.of(context).pop(_stars), child: const Text('Send rating')),
+    ],
+  );
 }
