@@ -16,6 +16,7 @@ class _BrokenRoleStore extends MemoryRoleStore {
 }
 
 Future<void> _pump(WidgetTester t, Fakes f) async {
+  reduceMotionFor(t);
   f.install();
   await t.pumpWidget(const RideFreelyApp());
   await t.pumpAndSettle();
@@ -68,6 +69,7 @@ void main() {
   });
 
   testWidgets('a failing role store does not strand the user on the splash screen', (t) async {
+    reduceMotionFor(t);
     final f = Fakes();
     f.install();
     Get.delete<RoleStore>(force: true);
@@ -101,7 +103,7 @@ void main() {
       t,
       Fakes(storedRole: UserRole.customer, customer: FakeAuthRepository(UserRole.customer, hasToken: true)),
     );
-    expect(find.text('Book a driver'), findsOneWidget);
+    expect(find.text('Book now'), findsWidgets);
     expect(find.text('Requests'), findsNothing);
     expect(find.text('Earnings'), findsNothing);
   });

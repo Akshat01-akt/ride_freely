@@ -11,6 +11,7 @@ import 'package:ride_freely/routes.dart';
 import '../fakes.dart';
 
 Future<void> _pumpApp(WidgetTester t, FakeAuthRepository repo) async {
+  reduceMotionFor(t);
   Fakes(
     storedRole: UserRole.driver,
     driver: repo,
@@ -42,7 +43,7 @@ void main() {
     await _pumpApp(t, repo);
     await t.enterText(find.byKey(const Key('phone')), '9876500000');
     await t.enterText(find.byKey(const Key('password')), 'password123');
-    await t.tap(find.widgetWithText(FilledButton, 'Log in'));
+    await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
     expect(repo.loginCalls, 1);
     expect(find.byType(DriverHomeShell), findsOneWidget);
@@ -53,7 +54,7 @@ void main() {
     await _pumpApp(t, FakeAuthRepository(UserRole.driver, loginError: 'Invalid phone or password'));
     await t.enterText(find.byKey(const Key('phone')), '9876500000');
     await t.enterText(find.byKey(const Key('password')), 'password123');
-    await t.tap(find.widgetWithText(FilledButton, 'Log in'));
+    await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
     expect(find.text('Invalid phone or password'), findsOneWidget);
     expect(find.byType(LoginPage), findsOneWidget);
@@ -65,8 +66,8 @@ void main() {
     await _openRegister(t);
     await _fillCommon(t);
     await t.enterText(find.byKey(const Key('hourly_rate')), '0');
-    await t.ensureVisible(find.widgetWithText(FilledButton, 'Create account'));
-    await t.tap(find.widgetWithText(FilledButton, 'Create account'));
+    await t.ensureVisible(find.widgetWithText(AppButton, 'Create account'));
+    await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();
     expect(find.text('Enter your licence number'), findsOneWidget);
     expect(find.text('Enter a rate above 0'), findsOneWidget);
@@ -81,8 +82,8 @@ void main() {
     await t.enterText(find.byKey(const Key('licence')), 'DL-0420110012345');
     await t.enterText(find.byKey(const Key('experience')), '6');
     await t.enterText(find.byKey(const Key('hourly_rate')), '180');
-    await t.ensureVisible(find.widgetWithText(FilledButton, 'Create account'));
-    await t.tap(find.widgetWithText(FilledButton, 'Create account'));
+    await t.ensureVisible(find.widgetWithText(AppButton, 'Create account'));
+    await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();
     expect(repo.registerCalls, 1);
     expect(repo.lastRegister!['licence_number'], 'DL-0420110012345');
@@ -113,6 +114,19 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Log out'));
     await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Log out'));
+    await t.pumpAndSettle();
     expect(find.byType(LoginPage), findsOneWidget);
+  });
+
+  testWidgets('choosing Stay on the logout prompt keeps the session', (t) async {
+    await _pumpApp(t, FakeAuthRepository(UserRole.driver, hasToken: true));
+    await t.tap(find.text('Profile'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Log out'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Stay'));
+    await t.pumpAndSettle();
+    expect(find.byType(LoginPage), findsNothing);
   });
 }

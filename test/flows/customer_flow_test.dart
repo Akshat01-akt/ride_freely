@@ -11,6 +11,7 @@ import 'package:ride_freely/routes.dart';
 import '../fakes.dart';
 
 Future<void> _pumpApp(WidgetTester t, FakeAuthRepository repo) async {
+  reduceMotionFor(t);
   Fakes(
     storedRole: UserRole.customer,
     customer: repo,
@@ -34,7 +35,7 @@ void main() {
   testWidgets('login page shows validation errors on empty submit', (t) async {
     final repo = FakeAuthRepository(UserRole.customer);
     await _pumpApp(t, repo);
-    await t.tap(find.widgetWithText(FilledButton, 'Log in'));
+    await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
     expect(find.text('Enter your phone number'), findsOneWidget);
     expect(find.text('Enter your password'), findsOneWidget);
@@ -46,7 +47,7 @@ void main() {
     await _pumpApp(t, repo);
     await t.enterText(find.byKey(const Key('phone')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'password123');
-    await t.tap(find.widgetWithText(FilledButton, 'Log in'));
+    await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
     expect(repo.loginCalls, 1);
     expect(find.byType(CustomerHomeShell), findsOneWidget);
@@ -56,7 +57,7 @@ void main() {
     await _pumpApp(t, FakeAuthRepository(UserRole.customer, loginError: 'Invalid phone or password'));
     await t.enterText(find.byKey(const Key('phone')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'password123');
-    await t.tap(find.widgetWithText(FilledButton, 'Log in'));
+    await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
     expect(find.text('Invalid phone or password'), findsOneWidget);
     expect(find.byType(LoginPage), findsOneWidget);
@@ -71,7 +72,7 @@ void main() {
     await t.enterText(find.byKey(const Key('name')), 'Asha Rao');
     await t.enterText(find.byKey(const Key('phone')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'short');
-    await t.tap(find.widgetWithText(FilledButton, 'Create account'));
+    await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();
     expect(find.text('Use at least 8 characters'), findsOneWidget);
     expect(repo.registerCalls, 0);
@@ -85,7 +86,7 @@ void main() {
     await t.enterText(find.byKey(const Key('name')), 'Asha Rao');
     await t.enterText(find.byKey(const Key('phone')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'password123');
-    await t.tap(find.widgetWithText(FilledButton, 'Create account'));
+    await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();
     expect(repo.registerCalls, 1);
     expect(repo.lastRegister!.containsKey('email'), isFalse);
@@ -98,6 +99,19 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Log out'));
     await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Log out'));
+    await t.pumpAndSettle();
     expect(find.byType(LoginPage), findsOneWidget);
+  });
+
+  testWidgets('choosing Stay on the logout prompt keeps the session', (t) async {
+    await _pumpApp(t, FakeAuthRepository(UserRole.customer, hasToken: true));
+    await t.tap(find.text('Profile'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Log out'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Stay'));
+    await t.pumpAndSettle();
+    expect(find.byType(LoginPage), findsNothing);
   });
 }

@@ -1,5 +1,40 @@
 import 'package:get/get.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_freely/core/core.dart';
+import 'package:ride_freely/features/customer/data/models.dart';
+import 'package:ride_freely/features/customer/data/sources.dart';
+
+/// Continuous animations never settle, so tests run with the OS reduce-motion setting on.
+void reduceMotionFor(WidgetTester t, {Size size = const Size(390, 844)}) {
+  t.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
+  // Lists build lazily, so tests need a phone-sized window rather than the 800x600 default.
+  t.view.physicalSize = size;
+  t.view.devicePixelRatio = 1;
+  addTearDown(t.view.reset);
+}
+
+class FakeDriversSource implements DriversSource {
+  FakeDriversSource(this.drivers);
+  final List<DriverSummary> drivers;
+
+  @override
+  Future<List<DriverSummary>> nearby() async => drivers;
+}
+
+class FakeWalletSource implements WalletSource {
+  FakeWalletSource({this.data = const WalletData(), this.bookingList = const []});
+  final WalletData data;
+  final List<BookingSummary> bookingList;
+
+  @override
+  Future<WalletData> load() async => data;
+
+  @override
+  Future<List<BookingSummary>> bookings() async => bookingList;
+}
+
 
 /// Repository that never touches the network.
 class FakeAuthRepository extends AuthRepository {
@@ -51,11 +86,22 @@ class FakeAuthRepository extends AuthRepository {
 }
 
 class Fakes {
-  Fakes({UserRole? storedRole, FakeAuthRepository? customer, FakeAuthRepository? driver})
-      : customer = customer ?? FakeAuthRepository(UserRole.customer),
+  Fakes({
+    UserRole? storedRole,
+    FakeAuthRepository? customer,
+    FakeAuthRepository? driver,
+    this.onboardingDone = true,
+    List<DriverSummary> drivers = const [],
+    WalletSource? wallet,
+  })  : driversSource = FakeDriversSource(drivers),
+        walletSource = wallet ?? FakeWalletSource(),
+        customer = customer ?? FakeAuthRepository(UserRole.customer),
         driver = driver ?? FakeAuthRepository(UserRole.driver),
         roleStore = MemoryRoleStore(storedRole);
 
+  final bool onboardingDone;
+  final FakeDriversSource driversSource;
+  final WalletSource walletSource;
   final FakeAuthRepository customer;
   final FakeAuthRepository driver;
   final MemoryRoleStore roleStore;
@@ -63,6 +109,9 @@ class Fakes {
   void install() {
     Get.reset();
     Get.put<RoleStore>(roleStore);
+    Get.put<OnboardingStore>(MemoryOnboardingStore(onboardingDone));
+    Get.put(DriversController(driversSource));
+    Get.put(WalletController(walletSource));
     Get.put(AuthController(customer), tag: UserRole.customer.name);
     Get.put(AuthController(driver), tag: UserRole.driver.name);
   }

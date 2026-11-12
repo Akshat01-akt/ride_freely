@@ -43,10 +43,28 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: c, width: w),
         );
+    final base = ThemeData(brightness: scheme.brightness, useMaterial3: true).textTheme;
+    final headline = scheme.brightness == Brightness.light ? AppColors.black : AppColors.cream;
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
+      textTheme: base
+          .apply(bodyColor: scheme.onSurface, displayColor: headline)
+          .copyWith(
+            headlineMedium: base.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: headline, letterSpacing: -0.6, height: 1.15),
+            headlineSmall: base.headlineSmall?.copyWith(fontWeight: FontWeight.w800, color: headline, letterSpacing: -0.4),
+            titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: headline, letterSpacing: -0.2),
+            titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: headline),
+            bodyLarge: base.bodyLarge?.copyWith(height: 1.45, color: scheme.onSurface),
+            bodyMedium: base.bodyMedium?.copyWith(height: 1.4, color: scheme.onSurface),
+          ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.charcoal,
+        contentTextStyle: const TextStyle(color: AppColors.cream),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,

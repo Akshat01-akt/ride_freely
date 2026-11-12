@@ -7,3 +7,8 @@ String? requiredPhone(String? v) {
   if (!_indianMobile.hasMatch(cleaned)) return 'Enter a valid 10-digit Indian mobile number';
   return null;
 }
+
+String? optionalEmail(String? v) {
+  final s = (v ?? '').trim();
+  return s.isEmpty || RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s) ? null : 'Enter a valid email';
+}
