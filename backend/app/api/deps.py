@@ -2,11 +2,13 @@ from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.security import InvalidTokenError, decode_token
-from app.models.user import User
+from app.models.driver import DriverProfile
+from app.models.user import Role, User
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -40,3 +42,12 @@ def require_role(*roles: str) -> Callable[..., User]:
         return user
 
     return dependency
+
+
+async def get_driver_profile(
+    user: User = Depends(require_role(Role.DRIVER)), session: AsyncSession = Depends(get_session)
+) -> DriverProfile:
+    profile = await session.scalar(select(DriverProfile).where(DriverProfile.user_id == user.id))
+    if profile is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Driver profile not found")
+    return profile

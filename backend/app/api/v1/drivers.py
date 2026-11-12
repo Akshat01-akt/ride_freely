@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_role
+from app.api.deps import get_driver_profile, require_role
 from app.core.database import get_session
+from app.models.document import DocType, DriverDocument
 from app.models.driver import DriverProfile
 from app.models.user import Role, User
-from app.schemas.auth import DriverOut
+from app.schemas.auth import DocumentOut, DriverOut
+from app.services import document_service as docs
+from app.services.storage import FileStorage, get_storage
 
 router = APIRouter(prefix="/drivers", tags=["drivers"])
 
@@ -28,3 +31,27 @@ async def me(user: User = Depends(require_role(Role.DRIVER)), session: AsyncSess
         availability_status=profile.availability_status,
         rating=profile.rating,
     )
+
+
+@router.post("/documents", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)
+async def upload_document(
+    doc_type: DocType = Form(...),
+    file: UploadFile = File(...),
+    profile: DriverProfile = Depends(get_driver_profile),
+    session: AsyncSession = Depends(get_session),
+    storage: FileStorage = Depends(get_storage),
+):
+    data = await file.read(docs.MAX_BYTES + 1)
+    try:
+        content_type = docs.validate_upload(file.content_type, data)
+    except docs.FileTooLarge:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "File is larger than 5 MB") from None
+    except docs.UnsupportedFile:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Upload a JPEG, PNG or PDF file") from None
+    return await docs.save_document(session, storage, profile.id, doc_type, content_type, data)
+
+
+@router.get("/documents", response_model=list[DocumentOut])
+async def list_documents(profile: DriverProfile = Depends(get_driver_profile), session: AsyncSession = Depends(get_session)):
+    rows = await session.scalars(select(DriverDocument).where(DriverDocument.driver_id == profile.id).order_by(DriverDocument.doc_type))
+    return list(rows)

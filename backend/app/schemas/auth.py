@@ -73,3 +73,12 @@ class DriverOut(BaseModel):
     verification_status: str
     availability_status: str
     rating: Decimal
+
+
+class DocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    doc_type: str
+    status: str
+    review_note: str | None = None
