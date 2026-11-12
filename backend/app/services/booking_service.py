@@ -87,6 +87,7 @@ async def create_booking(
 
     await expire_stale(session, driver_id=driver_id)
     await expire_stale(session, customer_id=customer_id)
+    await session.commit()  # release the expiry row locks before taking others, so two requests cannot deadlock
 
     driver = await session.get(DriverProfile, driver_id)
     user = await session.get(User, driver.user_id) if driver else None
@@ -101,6 +102,8 @@ async def create_booking(
     if start_time <= now + BOOK_NOW_WINDOW and driver.availability_status != AvailabilityStatus.AVAILABLE:
         raise DriverUnavailable
 
+    # Lock the customer's row so two simultaneous requests cannot both pass the limit.
+    await session.scalar(select(CustomerProfile.id).where(CustomerProfile.id == customer_id).with_for_update())
     active = await session.scalar(
         select(func.count()).select_from(Booking).where(
             Booking.customer_id == customer_id, Booking.status.in_(ACTIVE_STATES)
@@ -195,6 +198,22 @@ async def _move(
     return booking
 
 
+async def _driver_in_good_standing(session: AsyncSession, driver_id: uuid.UUID) -> DriverProfile:
+    """The locked driver profile, or IllegalTransition if they are no longer approved or are suspended."""
+    driver = await session.scalar(
+        select(DriverProfile).where(DriverProfile.id == driver_id).with_for_update().execution_options(populate_existing=True)
+    )
+    user = await session.get(User, driver.user_id)
+    if (
+        driver.verification_status != VerificationStatus.APPROVED
+        or driver.availability_status == AvailabilityStatus.SUSPENDED
+        or not user.is_active
+    ):
+        await session.rollback()
+        raise IllegalTransition
+    return driver
+
+
 async def cancel(session: AsyncSession, booking_id: uuid.UUID, customer_id: uuid.UUID) -> Booking:
     booking = await _move(
         session, booking_id, allowed=(BookingStatus.REQUESTED, BookingStatus.ACCEPTED),
@@ -208,6 +227,7 @@ async def accept(session: AsyncSession, booking_id: uuid.UUID, driver_id: uuid.U
     booking = await _move(
         session, booking_id, allowed=(BookingStatus.REQUESTED,), to=BookingStatus.ACCEPTED, driver_id=driver_id
     )
+    await _driver_in_good_standing(session, driver_id)
     await session.commit()
     return booking
 
@@ -224,10 +244,15 @@ async def start(session: AsyncSession, booking_id: uuid.UUID, driver_id: uuid.UU
     booking = await _move(
         session, booking_id, allowed=(BookingStatus.ACCEPTED,), to=BookingStatus.IN_PROGRESS, driver_id=driver_id
     )
-    driver = await session.scalar(
-        select(DriverProfile).where(DriverProfile.id == driver_id).with_for_update().execution_options(populate_existing=True)
+    driver = await _driver_in_good_standing(session, driver_id)
+    now = datetime.now(UTC)
+    already_driving = await session.scalar(
+        select(func.count()).select_from(Booking).where(
+            Booking.driver_id == driver_id, Booking.status == BookingStatus.IN_PROGRESS, Booking.id != booking.id
+        )
     )
-    if booking.start_time - BOOK_NOW_WINDOW > datetime.now(UTC) or driver.availability_status == AvailabilityStatus.SUSPENDED:
+    # Only inside the booked window (from 15 minutes before), and never two trips at once.
+    if booking.start_time - BOOK_NOW_WINDOW > now or booking.end_time <= now or already_driving:
         await session.rollback()
         raise IllegalTransition
     driver.availability_status = AvailabilityStatus.ON_TRIP

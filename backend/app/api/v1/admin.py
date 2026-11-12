@@ -116,6 +116,8 @@ async def decide_driver(
         raise _not_found() from None
     except review.RequirementsNotMet:
         raise HTTPException(status.HTTP_409_CONFLICT, "Approve the driver's licence and ID proof first") from None
+    except review.HasActiveBooking:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This driver has an active booking. Change their status after it ends.") from None
     return {"id": profile.id, "verification_status": profile.verification_status, "availability_status": profile.availability_status}
 
 

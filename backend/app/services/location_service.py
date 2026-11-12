@@ -84,6 +84,7 @@ async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, l
                   AND NOT EXISTS (
                     SELECT 1 FROM bookings b
                     WHERE b.driver_id = dp.id AND b.status IN ('REQUESTED', 'ACCEPTED', 'IN_PROGRESS')
+                      AND NOT (b.status = 'REQUESTED' AND b.expires_at < now())
                       AND b.start_time <= now() AND b.end_time > now()
                   )
                 ORDER BY distance

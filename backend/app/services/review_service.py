@@ -1,9 +1,12 @@
 import uuid
 
 from redis.asyncio import Redis
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.booking import Booking, BookingStatus
 from app.models.document import DocStatus, DocType, DriverDocument
 from app.models.driver import AvailabilityStatus, DriverProfile, VerificationStatus
 from app.services.location_service import clear_location
@@ -59,6 +62,19 @@ async def review_document(
     return doc
 
 
+async def _has_live_booking(session: AsyncSession, driver_id: uuid.UUID) -> bool:
+    """An accepted or running booking that has not ended yet; customers are counting on it."""
+    return (
+        await session.scalar(
+            select(Booking.id).where(
+                Booking.driver_id == driver_id,
+                Booking.status.in_((BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS)),
+                Booking.end_time > datetime.now(UTC),
+            ).limit(1)
+        )
+    ) is not None
+
+
 async def set_verification(
     session: AsyncSession, redis: Redis, driver_id: uuid.UUID, status: VerificationStatus
 ) -> DriverProfile:
@@ -73,6 +89,8 @@ async def set_verification(
         )
         if not set(REQUIRED_DOCS) <= approved:
             raise RequirementsNotMet
+    if status != VerificationStatus.APPROVED and await _has_live_booking(session, driver_id):
+        raise HasActiveBooking
     profile.verification_status = status
     if status != VerificationStatus.APPROVED and profile.availability_status == AvailabilityStatus.AVAILABLE:
         profile.availability_status = AvailabilityStatus.OFFLINE
@@ -84,7 +102,7 @@ async def set_verification(
 async def set_suspension(session: AsyncSession, redis: Redis, driver_id: uuid.UUID, suspended: bool) -> DriverProfile:
     profile = await _profile(session, driver_id)
     if suspended:
-        if profile.availability_status in _BOOKING_STATES:
+        if profile.availability_status in _BOOKING_STATES or await _has_live_booking(session, driver_id):
             raise HasActiveBooking
         profile.availability_status = AvailabilityStatus.SUSPENDED
         await clear_location(session, redis, driver_id)
