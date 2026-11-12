@@ -53,7 +53,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
           if (i == 1) {
             bookingsFor(UserRole.driver).load(keepItems: true);
           } else if (i == 2) {
-            Get.find<EarningsController>().load();
+            Get.find<EarningsController>().load(keep: true);
           }
         },
         items: const [

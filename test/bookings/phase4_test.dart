@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:ride_freely/app.dart';
 import 'package:ride_freely/core/core.dart';
 import 'package:ride_freely/features/bookings/bookings.dart';
 import 'package:ride_freely/features/driver/data/driver_api.dart';
+import 'package:ride_freely/features/driver/earnings.dart';
+import 'package:ride_freely/routes.dart';
 
 import '../core/fake_adapter.dart';
 import '../fakes.dart';
@@ -228,6 +232,129 @@ void main() {
       expect(api.listCalls, before);
       api.gate!.complete();
       await t.pumpAndSettle();
+    });
+  });
+
+  group('polling rules (review fixes)', () {
+    testWidgets('one watcher leaving does not stop another watcher\'s polling', (t) async {
+      reduceMotionFor(t);
+      final api = FakeBookingsApi();
+      final c = BookingsController(api, pollInterval: const Duration(seconds: 30));
+      addTearDown(c.onClose);
+      final a = Object(), b = Object();
+      c.attach(a);
+      c.attach(b);
+      c.detach(a);
+      await t.pump(const Duration(seconds: 31));
+      expect(api.listCalls, 1);
+      c.detach(b);
+      await t.pump(const Duration(seconds: 61));
+      expect(api.listCalls, 1);
+    });
+
+    testWidgets('a poll that fails keeps the list and shows no error', (t) async {
+      reduceMotionFor(t);
+      final api = FakeBookingsApi([FakeBookingsApi.booking()]);
+      final c = BookingsController(api, pollInterval: const Duration(seconds: 30));
+      addTearDown(c.onClose);
+      await c.load();
+      api.error = const ApiException('Cannot reach the server. Check your connection and try again.');
+      await c.load(keepItems: true, quiet: true);
+      expect(c.items.length, 1);
+      expect(c.error.value, isNull);
+    });
+
+    testWidgets('a poll does not flip the loading flag, so an empty list does not flicker', (t) async {
+      reduceMotionFor(t);
+      final api = FakeBookingsApi();
+      final c = BookingsController(api);
+      api.listGate = Completer<void>();
+      final poll = c.load(keepItems: true, quiet: true);
+      expect(c.loading.value, isFalse);
+      api.listGate!.complete();
+      await poll;
+    });
+
+    testWidgets('a late poll reply never overwrites what an action just changed', (t) async {
+      reduceMotionFor(t);
+      final api = FakeBookingsApi([FakeBookingsApi.booking()]);
+      final c = BookingsController(api);
+      await c.load();
+      final gate = Completer<void>();
+      api.listGate = gate;
+      final poll = c.load(keepItems: true, quiet: true); // asked while the booking was still REQUESTED
+      api.listGate = null;
+      await c.act('b1', BookingAction.cancel);
+      gate.complete();
+      await poll; // the old answer arrives late
+      expect(c.items.single.state, BookingState.cancelled);
+    });
+
+    testWidgets('polling does not run while another screen covers the tab', (t) async {
+      final api = await _customer(t, poll: const Duration(seconds: 30));
+      Get.toNamed(Routes.drivers);
+      await t.pumpAndSettle();
+      final before = api.listCalls;
+      await t.pump(const Duration(seconds: 95));
+      expect(api.listCalls, before);
+    });
+
+    testWidgets('polling keeps working after View my bookings replaces the screens', (t) async {
+      final api = await _customer(t, poll: const Duration(seconds: 30));
+      Get.toNamed(Routes.bookingConfirmed, arguments: FakeBookingsApi.booking());
+      await t.pumpAndSettle();
+      await t.tap(find.text('View my bookings'));
+      await t.pumpAndSettle();
+      final before = api.listCalls;
+      await t.pump(const Duration(seconds: 31));
+      await t.pump();
+      expect(api.listCalls, greaterThan(before));
+    });
+
+    testWidgets('polling survives quick tab switching with animations on', (t) async {
+      t.view.physicalSize = const Size(390, 844);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      final api = FakeBookingsApi([FakeBookingsApi.booking()]);
+      Fakes(
+        storedRole: UserRole.customer,
+        customer: FakeAuthRepository(UserRole.customer, hasToken: true),
+        customerBookings: api,
+        pollInterval: const Duration(seconds: 30),
+      ).install();
+      await t.pumpWidget(const RideFreelyApp());
+      for (var i = 0; i < 12; i++) {
+        await t.pump(const Duration(milliseconds: 500));
+      }
+      await t.tap(find.text('Bookings'));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.tap(find.text('Home'));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.tap(find.text('Bookings'));
+      await t.pump(const Duration(seconds: 1));
+      final before = api.listCalls;
+      await t.pump(const Duration(seconds: 31));
+      await t.pump();
+      expect(api.listCalls, greaterThan(before));
+      Get.deleteAll(force: true);
+    });
+  });
+
+  group('earnings session (review fix)', () {
+    test('a plain load clears the previous driver\'s totals; a refresh keeps them', () async {
+      final api = FakeDriverApi()..earningsData = const Earnings(
+        today: EarningsPeriod(trips: 1, amount: '1.00'), week: EarningsPeriod(trips: 1, amount: '1.00'),
+        month: EarningsPeriod(trips: 1, amount: '1.00'), total: EarningsPeriod(trips: 1, amount: '1.00'),
+      );
+      final c = EarningsController(api);
+      await c.load();
+      expect(c.data.value, isNotNull);
+      final reload = c.load();
+      expect(c.data.value, isNull);
+      await reload;
+      final refresh = c.load(keep: true);
+      expect(c.data.value, isNotNull);
+      await refresh;
     });
   });
 }

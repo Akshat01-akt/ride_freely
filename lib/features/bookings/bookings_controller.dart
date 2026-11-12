@@ -14,6 +14,13 @@ class BookingsController extends GetxController {
   final Duration pollInterval;
   Timer? _timer;
 
+  /// Who is showing the list right now (and whether they can be seen). Polling runs while anyone is.
+  final _watchers = <Object, bool Function()>{};
+  bool _appActive = true;
+
+  /// Bumped whenever an action changes the list, so a slower load answered later cannot overwrite it.
+  int _version = 0;
+
   final BookingsApi _api;
   final items = <Booking>[].obs;
   final loading = false.obs;
@@ -34,18 +41,28 @@ class BookingsController extends GetxController {
       e is ApiException ? e.message : 'Something went wrong. Please try again.';
 
   /// Loads the list. A plain load clears the old one first (it may belong to a previous account);
-  /// a refresh ([keepItems]) leaves it on screen while the new one arrives.
-  Future<void> load({bool keepItems = false}) async {
-    loading.value = true;
-    error.value = null;
+  /// a refresh ([keepItems]) leaves it on screen. A [quiet] load (polling) also leaves the loading flag and
+  /// error alone, and a failure of a refresh never blanks a list that is already showing.
+  Future<void> load({bool keepItems = false, bool quiet = false}) async {
+    final started = _version;
+    if (!quiet) {
+      loading.value = true;
+      error.value = null;
+    }
     if (!keepItems) items.clear();
     try {
-      items.assignAll(await _api.list());
+      final fresh = await _api.list();
+      if (started == _version) items.assignAll(fresh);
     } catch (e) {
-      items.clear();
-      error.value = _message(e);
+      if (keepItems && items.isNotEmpty) {
+        // A good list is already showing: a refresh that fails must not blank it.
+        if (!quiet) actionError.value = _message(e);
+      } else {
+        items.clear();
+        error.value = _message(e);
+      }
     } finally {
-      loading.value = false;
+      if (!quiet) loading.value = false;
     }
   }
 
@@ -69,6 +86,7 @@ class BookingsController extends GetxController {
         address: address,
         notes: notes,
       );
+      _version++;
       items.insert(0, booking);
       return booking;
     } catch (e) {
@@ -87,8 +105,10 @@ class BookingsController extends GetxController {
     if (actingId.value != null) return false;
     actingId.value = id;
     actionError.value = null;
+    _version++;
     try {
       final updated = await call();
+      _version++;
       final i = items.indexWhere((b) => b.id == id);
       if (i >= 0) items[i] = updated;
       return true;
@@ -102,24 +122,39 @@ class BookingsController extends GetxController {
     }
   }
 
-  /// Reloads every [pollInterval] while a list is on screen; skipped while something is loading or an action runs.
-  void startPolling() {
-    _timer?.cancel();
-    _timer = Timer.periodic(pollInterval, (_) {
-      if (actingId.value == null && !loading.value) {
-        load(keepItems: true);
-      }
-    });
+  /// A list on screen registers here. Polling runs while at least one watcher is registered, and stops
+  /// when the last one leaves, so one widget going away cannot stop another's polling.
+  void attach(Object watcher, {bool Function()? visible}) {
+    _watchers[watcher] = visible ?? () => true;
+    _timer ??= Timer.periodic(pollInterval, (_) => _poll());
   }
 
-  void stopPolling() {
-    _timer?.cancel();
-    _timer = null;
+  void detach(Object watcher) {
+    _watchers.remove(watcher);
+    if (_watchers.isEmpty) {
+      _timer?.cancel();
+      _timer = null;
+    }
+  }
+
+  /// The app went to the background (false) or came back (true; reloads once).
+  void setAppActive(bool active) {
+    if (active == _appActive) return;
+    _appActive = active;
+    if (active) _poll();
+  }
+
+  /// Skipped while backgrounded, while something is loading or an action runs, or when no watcher can be seen.
+  void _poll() {
+    if (!_appActive || actingId.value != null || loading.value) return;
+    if (!_watchers.values.any((visible) => visible())) return;
+    load(keepItems: true, quiet: true);
   }
 
   @override
   void onClose() {
-    stopPolling();
+    _timer?.cancel();
+    _timer = null;
     super.onClose();
   }
 }

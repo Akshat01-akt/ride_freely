@@ -1,6 +1,6 @@
 import uuid
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -293,7 +293,7 @@ async def rate(session: AsyncSession, booking_id: uuid.UUID, customer_id: uuid.U
     average = await session.scalar(
         select(func.avg(Booking.rating)).where(Booking.driver_id == booking.driver_id, Booking.rating.is_not(None))
     )
-    driver.rating = Decimal(average).quantize(Decimal("0.01"))
+    driver.rating = Decimal(average).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     await session.commit()
     return booking
 

@@ -183,9 +183,10 @@ class FakeBookingsApi implements BookingsApi {
   @override
   Future<List<Booking>> list() async {
     listCalls++;
+    final snapshot = items; // what the server knew when the request was answered
     await listGate?.future;
     if (error != null) throw error!;
-    return items;
+    return snapshot;
   }
 
   @override

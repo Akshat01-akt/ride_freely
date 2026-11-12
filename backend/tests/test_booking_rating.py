@@ -96,3 +96,29 @@ async def test_complete_records_when_the_trip_finished(client, db_session):
     row = (await db_session.execute(select(Booking).where(Booking.id == b["id"]))).scalar_one()
     assert row.completed_at is not None
     assert abs((datetime.now(UTC) - row.completed_at).total_seconds()) < 30
+
+
+async def test_the_average_rounds_half_up(client, db_session):
+    from decimal import Decimal
+
+    from sqlalchemy import select
+
+    from app.models.booking import Booking, BookingStatus, BookingType
+    from app.models.customer import CustomerProfile
+
+    ch, dh, pid = await setup(client, db_session)
+    cp = (await db_session.execute(select(CustomerProfile))).scalars().first()
+    from sqlalchemy import select as _s
+    from app.models.driver import DriverProfile
+
+    for i, stars in enumerate([4, 4, 4, 4, 4, 4, 5]):
+        t = datetime.now(UTC) - timedelta(days=10 + i)
+        db_session.add(Booking(
+            customer_id=cp.id, driver_id=(await db_session.execute(_s(DriverProfile.id))).scalar_one(),
+            booking_type=BookingType.HOURLY, start_time=t, end_time=t + timedelta(hours=1), hours=1, pickup_address="x",
+            price_amount=Decimal("100"), status=BookingStatus.COMPLETED, expires_at=t, completed_at=t, rating=stars,
+        ))
+    await db_session.commit()
+    b = await completed(client, db_session, ch, dh, pid)
+    await rate(client, ch, b["id"], 4)  # 33 / 8 = 4.125
+    assert (await client.get("/api/v1/drivers/me", headers=dh)).json()["rating"] == "4.13"

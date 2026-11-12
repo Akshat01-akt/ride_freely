@@ -12,9 +12,11 @@ class EarningsController extends GetxController {
   final loading = false.obs;
   final error = RxnString();
 
-  Future<void> load() async {
+  /// A plain load clears the previous driver's totals first; a refresh ([keep]) leaves them showing.
+  Future<void> load({bool keep = false}) async {
     loading.value = true;
     error.value = null;
+    if (!keep) data.value = null;
     try {
       data.value = await _api.earnings();
     } catch (e) {
@@ -47,7 +49,7 @@ class EarningsTab extends StatelessWidget {
         return ListView(padding: const EdgeInsets.all(20), children: [for (var i = 0; i < 2; i++) const Padding(padding: EdgeInsets.only(bottom: 12), child: ShimmerBox(height: 90, radius: 24))]);
       }
       return RefreshIndicator(
-        onRefresh: c.load,
+        onRefresh: () => c.load(keep: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),

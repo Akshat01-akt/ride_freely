@@ -13,6 +13,8 @@ def upgrade() -> None:
     op.add_column('bookings', sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True))
     op.add_column('bookings', sa.Column('rating', sa.SmallInteger(), nullable=True))
     op.add_column('bookings', sa.Column('rated_at', sa.DateTime(timezone=True), nullable=True))
+    # Nothing wrote to a booking after COMPLETED before this migration, so updated_at is when it finished.
+    op.execute("UPDATE bookings SET completed_at = updated_at WHERE status = 'COMPLETED' AND completed_at IS NULL")
     op.create_check_constraint('bookings_rating_range', 'bookings', 'rating BETWEEN 1 AND 5')
 
 
