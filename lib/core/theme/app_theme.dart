@@ -38,7 +38,8 @@ abstract final class AppTheme {
       );
 
   static ThemeData _build(ColorScheme scheme) {
-    final fill = scheme.brightness == Brightness.light ? Colors.white : AppColors.graphite;
+    // On dark screens inputs sit inside graphite cards, so they get a darker fill to stand out.
+    final fill = scheme.brightness == Brightness.light ? Colors.white : Color.lerp(AppColors.charcoal, AppColors.black, 0.3)!;
     OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: c, width: w),
