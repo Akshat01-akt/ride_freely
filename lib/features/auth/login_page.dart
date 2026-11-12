@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../core/core.dart';
 import '../../routes.dart';
 import 'auth_scaffold.dart';
+import 'server_help.dart';
 import 'validators.dart';
 
 class LoginPage extends StatefulWidget {
@@ -101,6 +102,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       Obx(() => FormError(_auth.error.value)),
+      ServerHelp(auth: _auth),
       const SizedBox(height: 16),
       Obx(
         () => AppButton(

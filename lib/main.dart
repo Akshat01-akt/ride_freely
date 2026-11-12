@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -8,20 +9,29 @@ import 'features/driver/availability_controller.dart';
 import 'features/driver/data/driver_api.dart';
 import 'features/driver/documents_controller.dart';
 
-const _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2/api/v1');
+/// Fixes the backend address at build time. When empty the app uses a per-platform default,
+/// and debug builds can change it from the login screen.
+const _fixedBaseUrl = String.fromEnvironment('API_BASE_URL');
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final defaultUrl = _fixedBaseUrl.isNotEmpty ? _fixedBaseUrl : defaultApiUrl(defaultTargetPlatform);
+  final clients = <ApiClient>[];
   Get.put<RoleStore>(SecureRoleStore(), permanent: true);
   Get.put<OnboardingStore>(SecureOnboardingStore(), permanent: true);
   Get.put(WalletController(kUiPreview ? PreviewWalletSource() : BackendWalletSource()), permanent: true);
   final repositories = <UserRole, AuthRepository>{};
   for (final role in UserRole.values) {
     // Separate token storage per role so a customer and a driver login never mix.
-    final client = ApiClient(baseUrl: _baseUrl, storage: SecureTokenStorage(namespace: role.name));
+    final client = ApiClient(baseUrl: defaultUrl, storage: SecureTokenStorage(namespace: role.name));
+    clients.add(client);
     final repo = AuthRepository(client, role);
     repositories[role] = repo;
     Get.put(AuthController(repo), tag: role.name, permanent: true);
   }
+  final serverConfig = ServerConfig(defaultUrl: defaultUrl, store: SecureServerStore(), clients: clients, honourSaved: _fixedBaseUrl.isEmpty);
+  await serverConfig.load();
+  Get.put(serverConfig, permanent: true);
   final api = HttpDriverApi(repositories[UserRole.driver]!.client);
   Get.put<LocationService>(GeolocatorLocationService(), permanent: true);
   Get.put<DriverApi>(api, permanent: true);

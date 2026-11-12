@@ -1,5 +1,6 @@
 export 'api/api_client.dart';
 export 'api/api_exception.dart';
+export 'api/server_config.dart';
 export 'auth/auth_controller.dart';
 export 'auth/auth_repository.dart';
 export 'models/token_pair.dart';

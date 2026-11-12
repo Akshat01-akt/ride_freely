@@ -5,6 +5,7 @@ import '../../core/core.dart';
 import '../../routes.dart';
 import '../auth/auth_scaffold.dart';
 import '../auth/validators.dart';
+import '../auth/server_help.dart';
 
 class DriverRegisterPage extends StatefulWidget {
   const DriverRegisterPage({super.key});
@@ -134,6 +135,7 @@ class _DriverRegisterPageState extends State<DriverRegisterPage> {
             ),
           ),
           Obx(() => FormError(_auth.error.value)),
+          ServerHelp(auth: _auth),
           const SizedBox(height: 16),
           Obx(() => AppButton(label: 'Create account', loading: _auth.isLoading.value, onPressed: _submit)),
         ],

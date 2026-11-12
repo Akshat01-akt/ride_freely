@@ -20,6 +20,14 @@ class ApiClient {
 
   final Dio dio;
   final TokenStorage storage;
+
+  String get baseUrl => dio.options.baseUrl;
+
+  /// Points this client (and its token-refresh client) at another backend address.
+  set baseUrl(String value) {
+    dio.options.baseUrl = value;
+    _refreshDio.options.baseUrl = value;
+  }
   final Dio _refreshDio;
   Future<bool>? _refreshing;
 

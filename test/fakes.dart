@@ -127,11 +127,17 @@ class FakeAuthRepository extends AuthRepository {
     UserRole role, {
     this.hasToken = false,
     this.loginError,
+    this.loginException,
+    this.registerException,
     this.verification = 'PENDING',
   }) : super(ApiClient(baseUrl: 'http://fake', storage: MemoryTokenStorage()), role);
 
   final bool hasToken;
   final String? loginError;
+
+  /// Throws this exact exception on login (for example a connection failure).
+  final ApiException? loginException;
+  final ApiException? registerException;
   final String verification;
   int loginCalls = 0;
   int registerCalls = 0;
@@ -143,6 +149,7 @@ class FakeAuthRepository extends AuthRepository {
   @override
   Future<void> login(String phone, String password) async {
     loginCalls++;
+    if (loginException != null) throw loginException!;
     if (loginError != null) throw ApiException(loginError!, statusCode: 401);
   }
 
@@ -150,6 +157,7 @@ class FakeAuthRepository extends AuthRepository {
   Future<void> register(Map<String, dynamic> fields) async {
     registerCalls++;
     lastRegister = fields;
+    if (registerException != null) throw registerException!;
   }
 
   @override
@@ -197,6 +205,7 @@ class Fakes {
   final FakePicker picker;
   final FakeDriversSource driversSource;
   final WalletSource walletSource;
+  final ServerConfig serverConfig = ServerConfig(defaultUrl: 'http://default.test/api/v1', store: MemoryServerStore(), clients: []);
   final FakeAuthRepository customer;
   final FakeAuthRepository driver;
   final MemoryRoleStore roleStore;
@@ -206,6 +215,7 @@ class Fakes {
     // Closing controllers cancels the location timer, which would otherwise outlive the test.
     addTearDown(() => Get.deleteAll(force: true));
     Get.put<RoleStore>(roleStore);
+    Get.put<ServerConfig>(serverConfig);
     Get.put<OnboardingStore>(MemoryOnboardingStore(onboardingDone));
     Get.put<DriverApi>(driverApi);
     Get.put<LocationService>(location);

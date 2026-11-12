@@ -13,6 +13,12 @@ class AuthController extends GetxController {
   final status = AuthStatus.unknown.obs;
   final isLoading = false.obs;
   final error = RxnString();
+
+  /// True when the last failure was "could not reach the server" (as opposed to a refusal).
+  final connectionFailed = false.obs;
+
+  /// The backend address that was tried, shown to help fix a wrong setting.
+  final serverAddress = RxnString();
   final profile = <String, dynamic>{}.obs;
 
   UserRole get role => _repo.role;
@@ -49,12 +55,15 @@ class AuthController extends GetxController {
   Future<bool> _authenticate(Future<void> Function() action) async {
     isLoading.value = true;
     error.value = null;
+    connectionFailed.value = false;
     try {
       await action();
       await _loadProfile();
       return status.value == AuthStatus.authenticated;
     } on ApiException catch (e) {
       error.value = e.message;
+      connectionFailed.value = e.isConnectionError;
+      serverAddress.value = e.address;
       status.value = AuthStatus.unauthenticated;
       return false;
     } finally {
@@ -70,6 +79,8 @@ class AuthController extends GetxController {
       // A stored token the server rejects (or no network at start) must land on login, not crash.
       if (e.statusCode == 401) await _repo.logout();
       error.value = e.statusCode == 401 ? null : e.message;
+      connectionFailed.value = e.isConnectionError;
+      serverAddress.value = e.address;
       status.value = AuthStatus.unauthenticated;
     }
   }

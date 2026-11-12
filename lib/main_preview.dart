@@ -62,6 +62,7 @@ void main() {
     'verification_status': 'PENDING',
     'rating': '0.00',
   });
+  Get.put(ServerConfig(defaultUrl: 'http://preview.invalid/api/v1', store: MemoryServerStore(), clients: const []), permanent: true);
   final api = _PreviewDriverApi();
   Get.put<LocationService>(_PreviewLocation(), permanent: true);
   Get.put<DriverApi>(api, permanent: true);
