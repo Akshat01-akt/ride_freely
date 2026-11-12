@@ -1,9 +1,13 @@
 import uuid
 
+from redis.asyncio import Redis
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import DocStatus, DocType, DriverDocument
+from app.models.driver import DriverProfile, VerificationStatus
+from app.services.review_service import REQUIRED_DOCS, send_back_for_review
 from app.services.storage import FileStorage
 
 MAX_BYTES = 5 * 1024 * 1024
@@ -23,6 +27,10 @@ class FileTooLarge(Exception):
     pass
 
 
+class UploadConflict(Exception):
+    pass
+
+
 def validate_upload(content_type: str | None, data: bytes) -> str:
     """Return the verified content type. The declared type must be allowed AND match the file's own header."""
     if len(data) > MAX_BYTES:
@@ -34,23 +42,37 @@ def validate_upload(content_type: str | None, data: bytes) -> str:
 
 
 async def save_document(
-    session: AsyncSession, storage: FileStorage, driver_id: uuid.UUID, doc_type: DocType, content_type: str, data: bytes
+    session: AsyncSession,
+    storage: FileStorage,
+    redis: Redis,
+    profile: DriverProfile,
+    doc_type: DocType,
+    content_type: str,
+    data: bytes,
 ) -> DriverDocument:
+    driver_id = profile.id
     key = f"{driver_id}/{uuid.uuid4()}"
     await storage.save(key, data)
-    existing = await session.scalar(
-        select(DriverDocument).where(DriverDocument.driver_id == driver_id, DriverDocument.doc_type == doc_type)
-    )
     old_key = None
-    if existing is None:
-        doc = DriverDocument(driver_id=driver_id, doc_type=doc_type, file_key=key, content_type=content_type, size_bytes=len(data))
-        session.add(doc)
-    else:
-        doc, old_key = existing, existing.file_key
-        doc.file_key, doc.content_type, doc.size_bytes = key, content_type, len(data)
-        doc.status, doc.review_note = DocStatus.PENDING, None
     try:
+        existing = await session.scalar(
+            select(DriverDocument).where(DriverDocument.driver_id == driver_id, DriverDocument.doc_type == doc_type)
+        )
+        if existing is None:
+            doc = DriverDocument(driver_id=driver_id, doc_type=doc_type, file_key=key, content_type=content_type, size_bytes=len(data))
+            session.add(doc)
+        else:
+            doc, old_key = existing, existing.file_key
+            doc.file_key, doc.content_type, doc.size_bytes = key, content_type, len(data)
+            doc.status, doc.review_note = DocStatus.PENDING, None
+        # A new licence or ID needs a fresh look: approved drivers go back to the queue, rejected ones re-enter it.
+        if doc_type in REQUIRED_DOCS and profile.verification_status != VerificationStatus.PENDING:
+            await send_back_for_review(session, redis, profile)
         await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        await storage.delete(key)
+        raise UploadConflict from None
     except Exception:
         await session.rollback()
         await storage.delete(key)

@@ -34,7 +34,7 @@ async def test_nearby_drivers_are_sorted_by_distance(client, db_session):
     drivers = r.json()["drivers"]
     assert len(drivers) == 2
     d = [x["distance_meters"] for x in drivers]
-    assert d == sorted(d) and 900 < d[0] < 1100 and 3800 < d[1] < 4200
+    assert d == sorted(d) and 900 <= d[0] <= 1100 and 3800 <= d[1] <= 4200
 
 
 async def test_response_exposes_no_exact_location_or_private_details(client, db_session):
@@ -56,9 +56,10 @@ async def test_default_radius_is_5km_and_it_can_be_widened(client, db_session):
 async def test_a_driver_exactly_at_the_radius_is_included(client, db_session):
     c = await register_customer(client)
     await _go_online(client, db_session, "+919876500001", NEAR)
-    exact = (await _search(client, c)).json()["drivers"][0]["distance_meters"]
-    assert len((await _search(client, c, radius=exact)).json()["drivers"]) == 1
-    assert (await _search(client, c, radius=exact - 1)).json()["drivers"] == []
+    true_m = (await db_session.execute(text(
+        "select ST_Distance(location, ST_SetSRID(ST_MakePoint(80.3319, 26.4499), 4326)::geography) from driver_locations"))).scalar_one()
+    assert len((await _search(client, c, radius=true_m)).json()["drivers"]) == 1
+    assert (await _search(client, c, radius=true_m - 1)).json()["drivers"] == []
 
 
 async def test_a_driver_whose_location_expired_is_not_listed(client, db_session):

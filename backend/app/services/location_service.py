@@ -1,4 +1,5 @@
 import json
+import math
 import uuid
 from datetime import UTC, datetime
 
@@ -57,6 +58,13 @@ async def record_location(
 
 MAX_RESULTS = 50
 
+# Customers choose the search point, so exact distances from several points would reveal a driver's position.
+DISTANCE_STEP_METERS = 100
+
+
+def _coarse(distance: float) -> float:
+    return float(max(1, math.ceil(distance / DISTANCE_STEP_METERS)) * DISTANCE_STEP_METERS)
+
 
 async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, longitude: float, radius_m: float) -> list[dict]:
     """Verified, available drivers within [radius_m] metres, nearest first, whose live location is still fresh."""
@@ -72,11 +80,12 @@ async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, l
                 JOIN users u ON u.id = dp.user_id
                 WHERE dp.verification_status = 'APPROVED' AND dp.availability_status = 'AVAILABLE'
                   AND u.is_active AND ST_DWithin(l.location, here.p, :radius)
+                  AND l.recorded_at > now() - make_interval(secs => :fresh)
                 ORDER BY distance
                 LIMIT :limit
                 """
             ),
-            {"lat": latitude, "lng": longitude, "radius": radius_m, "limit": MAX_RESULTS},
+            {"lat": latitude, "lng": longitude, "radius": radius_m, "limit": MAX_RESULTS, "fresh": LOCATION_TTL_SECONDS},
         )
     ).all()
     if not rows:
@@ -90,7 +99,7 @@ async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, l
             "rating": str(r.rating),
             "experience_years": r.experience_years,
             "verified": True,
-            "distance_meters": round(float(r.distance), 1),
+            "distance_meters": _coarse(float(r.distance)),
         }
         for r, live in zip(rows, fresh, strict=True)
         if live is not None

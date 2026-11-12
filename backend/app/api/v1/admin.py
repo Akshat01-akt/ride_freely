@@ -77,13 +77,28 @@ async def download_document(doc_id: uuid.UUID, session: AsyncSession = Depends(g
     if doc is None:
         raise _not_found()
     data = await storage.read(doc.file_key)
-    return Response(data, media_type=doc.content_type, headers={"Content-Disposition": 'attachment; filename="document"'})
+    extension = {"image/png": "png", "image/jpeg": "jpg", "application/pdf": "pdf"}.get(doc.content_type, "bin")
+    return Response(
+        data,
+        media_type=doc.content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="document.{extension}"',
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "sandbox; default-src 'none'",
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.patch("/documents/{doc_id}", response_model=DocumentOut)
-async def decide_document(doc_id: uuid.UUID, body: DocumentDecision, session: AsyncSession = Depends(get_session)):
+async def decide_document(
+    doc_id: uuid.UUID,
+    body: DocumentDecision,
+    session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
+):
     try:
-        return await review.review_document(session, doc_id, DocStatus(body.status), body.note)
+        return await review.review_document(session, redis, doc_id, DocStatus(body.status), body.note)
     except review.NotFound:
         raise _not_found() from None
 
@@ -115,4 +130,6 @@ async def suspend_driver(
         profile = await review.set_suspension(session, redis, driver_id, body.suspended)
     except review.NotFound:
         raise _not_found() from None
+    except review.HasActiveBooking:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This driver has an active booking. Suspend after it ends.") from None
     return {"id": profile.id, "availability_status": profile.availability_status}

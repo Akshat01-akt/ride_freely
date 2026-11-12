@@ -44,6 +44,7 @@ async def upload_document(
     profile: DriverProfile = Depends(get_driver_profile),
     session: AsyncSession = Depends(get_session),
     storage: FileStorage = Depends(get_storage),
+    redis: Redis = Depends(get_redis),
 ):
     data = await file.read(docs.MAX_BYTES + 1)
     try:
@@ -52,7 +53,10 @@ async def upload_document(
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "File is larger than 5 MB") from None
     except docs.UnsupportedFile:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Upload a JPEG, PNG or PDF file") from None
-    return await docs.save_document(session, storage, profile.id, doc_type, content_type, data)
+    try:
+        return await docs.save_document(session, storage, redis, profile, doc_type, content_type, data)
+    except docs.UploadConflict:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Another upload for this document is in progress. Try again.") from None
 
 
 @router.get("/documents", response_model=list[DocumentOut])
