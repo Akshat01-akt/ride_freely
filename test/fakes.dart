@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_freely/core/core.dart';
+import 'package:ride_freely/features/bookings/bookings.dart';
 import 'package:ride_freely/features/customer/data/models.dart';
 import 'package:ride_freely/features/driver/availability_controller.dart';
 import 'package:ride_freely/features/driver/data/driver_api.dart';
@@ -105,6 +106,58 @@ class FakeDriversSource implements DriversSource {
     calls++;
     if (error != null) throw error!;
     return drivers;
+  }
+}
+
+class FakeBookingsApi implements BookingsApi {
+  FakeBookingsApi([List<Booking>? items]) : items = items ?? [];
+
+  static Booking booking({String id = 'b1', BookingState state = BookingState.requested, String driver = 'Ravi Kumar', String customer = 'Asha Rao', String? driverPhone, String? customerPhone}) => Booking(
+        id: id, state: state, type: BookingType.hourly, start: DateTime.utc(2030, 1, 5, 10), end: DateTime.utc(2030, 1, 5, 12), hours: 2,
+        price: '360.00', address: '12 MG Road', expiresAt: DateTime.utc(2030, 1, 1, 10, 10), driverId: 'd1', driverName: driver,
+        customerName: customer, driverPhone: driverPhone, customerPhone: customerPhone,
+      );
+
+  List<Booking> items;
+  Object? error;
+  Object? actError;
+  Completer<void>? gate;
+  int actCalls = 0;
+  final created = <Map<String, Object?>>[];
+  final actions = <String>[];
+
+  @override
+  Future<List<Booking>> list() async {
+    if (error != null) throw error!;
+    return items;
+  }
+
+  @override
+  Future<Booking> create({required String driverId, required BookingType type, DateTime? start, int? hours, required String address, String? notes}) async {
+    created.add({'driverId': driverId, 'type': type, 'start': start, 'hours': hours, 'address': address, 'notes': notes});
+    if (error != null) throw error!;
+    final b = booking(id: 'new${created.length}');
+    items = [b, ...items];
+    return b;
+  }
+
+  @override
+  Future<Booking> act(String id, BookingAction action) async {
+    actCalls++;
+    actions.add('$id:${action.name}');
+    await gate?.future;
+    if (actError != null) throw actError!;
+    final next = switch (action) {
+      BookingAction.cancel => BookingState.cancelled,
+      BookingAction.accept => BookingState.accepted,
+      BookingAction.reject => BookingState.rejected,
+      BookingAction.start => BookingState.inProgress,
+      BookingAction.complete => BookingState.completed,
+    };
+    final old = items.firstWhere((b) => b.id == id);
+    final updated = booking(id: id, state: next, driver: old.driverName, customer: old.customerName);
+    items = [for (final b in items) b.id == id ? updated : b];
+    return updated;
   }
 }
 
