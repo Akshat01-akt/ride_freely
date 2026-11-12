@@ -73,11 +73,12 @@ function detailOf(body, status) {
 }
 
 let refreshing = null;
+let loginNotice = null; // shown once on the login form, e.g. after the session ended
 function refreshTokens() {
+  if (!session.refresh) return Promise.resolve(false);
   // One refresh at a time, so several requests failing together do not each spend the refresh token.
   refreshing ??= (async () => {
     try {
-      if (!session.refresh) return false;
       const r = await fetch(`${API}/auth/refresh`, {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ refresh_token: session.refresh }),
       });
@@ -100,8 +101,9 @@ async function api(path, { method = 'GET', body, blob = false } = {}) {
   if (r.status === 401 && (await refreshTokens())) r = await send();
   if (r.status === 401) {
     session.clear();
-    location.hash = '';
-    showLogin('Your session ended. Log in again.');
+    loginNotice = 'Your session ended. Log in again.';
+    if (location.hash) location.hash = '';
+    else render();
     throw new ApiError('Session expired', 401);
   }
   if (!r.ok) throw new ApiError(detailOf(await r.json().catch(() => null), r.status), r.status);
@@ -142,6 +144,7 @@ const askNote = (title, text, okLabel) => openDialog((dialog, close) => {
 
 async function viewDocument(doc) {
   let url;
+  let closed = false;
   const done = openDialog((dialog, close) => {
     const body = h('div', { class: 'viewer' }, h('div', { class: 'loading' }, 'Loading document…'));
     dialog.append(
@@ -149,6 +152,7 @@ async function viewDocument(doc) {
       h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: () => close() }, 'Close')),
     );
     api(`/admin/documents/${doc.id}/file`, { blob: true }).then((blob) => {
+      if (closed) return; // closed before it arrived: nothing to show, nothing to free
       url = URL.createObjectURL(blob);
       body.replaceChildren(
         blob.type.startsWith('image/')
@@ -158,18 +162,20 @@ async function viewDocument(doc) {
     }).catch((e) => body.replaceChildren(h('div', { class: 'error' }, e.message)));
   });
   await done;
+  closed = true;
   if (url) URL.revokeObjectURL(url);
 }
 
 // ------------------------------------------------------------------ pages
 
 function pager(state, total, reload) {
+  const move = (delta) => (e) => { e.currentTarget.disabled = true; state.offset += delta; reload(); };
   const from = total === 0 ? 0 : state.offset + 1;
   const to = Math.min(state.offset + PAGE_SIZE, total);
   return h('div', { class: 'pager' },
     h('span', {}, `${from}–${to} of ${total}`),
-    h('button', { class: 'btn secondary small', disabled: state.offset === 0, onclick: () => { state.offset -= PAGE_SIZE; reload(); } }, 'Previous'),
-    h('button', { class: 'btn secondary small', disabled: to >= total, onclick: () => { state.offset += PAGE_SIZE; reload(); } }, 'Next'));
+    h('button', { class: 'btn secondary small', disabled: state.offset === 0, onclick: move(-PAGE_SIZE) }, 'Previous'),
+    h('button', { class: 'btn secondary small', disabled: to >= total, onclick: move(PAGE_SIZE) }, 'Next'));
 }
 
 function debounce(fn, ms) {
@@ -200,12 +206,15 @@ async function driversPage(params) {
     ...[['', 'All drivers'], ['PENDING', 'Waiting for approval'], ['APPROVED', 'Approved'], ['REJECTED', 'Rejected']]
       .map(([v, l]) => h('option', { value: v, selected: v === state.verification }, l)));
 
+  let latest = 0;
   async function load() {
+    const mine = ++latest; // an older, slower answer must not replace a newer one
     try {
       const q = new URLSearchParams({ limit: PAGE_SIZE, offset: state.offset });
       if (state.verification) q.set('verification', state.verification);
       if (state.q) q.set('q', state.q);
       const data = await api(`/admin/drivers?${q}`);
+      if (mine !== latest) return;
       results.replaceChildren(
         data.items.length === 0
           ? h('div', { class: 'card empty' }, 'No drivers match.')
@@ -297,12 +306,15 @@ async function usersPage(params) {
     } catch (e) { if (e.status !== 401) toast(e.message, true); }
   }
 
+  let latest = 0;
   async function load() {
+    const mine = ++latest;
     try {
       const q = new URLSearchParams({ limit: PAGE_SIZE, offset: state.offset });
       if (state.role) q.set('role', state.role);
       if (state.q) q.set('q', state.q);
       const data = await api(`/admin/users?${q}`);
+      if (mine !== latest) return;
       results.replaceChildren(
         data.items.length === 0
           ? h('div', { class: 'card empty' }, 'No users match.')
@@ -324,7 +336,8 @@ async function usersPage(params) {
 
 // ------------------------------------------------------------------ shell, login and routing
 
-function showLogin(message) {
+function showLogin(message = loginNotice) {
+  loginNotice = null;
   const phone = h('input', { type: 'tel', autocomplete: 'username', required: true, placeholder: '98765 43210' });
   const password = h('input', { type: 'password', autocomplete: 'current-password', required: true });
   const error = h('div', { class: 'error', role: 'alert', hidden: !message }, message || '');

@@ -3,7 +3,7 @@ import uuid
 from redis.asyncio import Redis
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.booking import Booking, BookingStatus
@@ -68,15 +68,12 @@ async def _has_live_booking(
     session: AsyncSession, driver_id: uuid.UUID | None = None, customer_id: uuid.UUID | None = None
 ) -> bool:
     """An accepted or running booking that has not ended yet; the other party is counting on it."""
-    return (
-        await session.scalar(
-            select(Booking.id).where(
-                (Booking.driver_id == driver_id) if driver_id is not None else (Booking.customer_id == customer_id),
-                Booking.status.in_((BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS)),
-                Booking.end_time > datetime.now(UTC),
-            ).limit(1)
-        )
-    ) is not None
+    owner = (Booking.driver_id == driver_id) if driver_id is not None else (Booking.customer_id == customer_id)
+    running_or_upcoming = (
+        ((Booking.status == BookingStatus.ACCEPTED) & (Booking.end_time > datetime.now(UTC)))
+        | (Booking.status == BookingStatus.IN_PROGRESS)  # a trip nobody has completed is still live
+    )
+    return (await session.scalar(select(Booking.id).where(owner, running_or_upcoming).limit(1))) is not None
 
 
 async def set_verification(
@@ -151,12 +148,19 @@ async def set_user_active(session: AsyncSession, redis: Redis, user_id: uuid.UUI
     if not active:
         if user.role == Role.ADMIN:
             raise ProtectedAccount
-        driver = await session.scalar(select(DriverProfile).where(DriverProfile.user_id == user.id))
-        customer = await session.scalar(select(CustomerProfile).where(CustomerProfile.user_id == user.id))
+        # Lock the profile rows so an accept that is running right now finishes before we look.
+        driver = await session.scalar(select(DriverProfile).where(DriverProfile.user_id == user.id).with_for_update())
+        customer = await session.scalar(select(CustomerProfile).where(CustomerProfile.user_id == user.id).with_for_update())
         if driver is not None and await _has_live_booking(session, driver_id=driver.id):
             raise HasActiveBooking
         if customer is not None and await _has_live_booking(session, customer_id=customer.id):
             raise HasActiveBooking
+        # Unanswered requests would otherwise be left for someone who can no longer answer or cancel them.
+        for profile, column in ((driver, Booking.driver_id), (customer, Booking.customer_id)):
+            if profile is not None:
+                await session.execute(
+                    update(Booking).where(column == profile.id, Booking.status == BookingStatus.REQUESTED).values(status=BookingStatus.CANCELLED)
+                )
         if driver is not None and driver.availability_status in (AvailabilityStatus.AVAILABLE, AvailabilityStatus.RESERVED):
             driver.availability_status = AvailabilityStatus.OFFLINE
             await clear_location(session, redis, driver.id)

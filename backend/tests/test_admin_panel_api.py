@@ -150,3 +150,44 @@ async def test_unknown_user_is_404_and_bad_body_422(client, db_session):
     assert (await client.patch(f"{A}/users/{uuid.uuid4()}/active", json={"active": False}, headers=ah)).status_code == 404
     assert (await client.patch(f"{A}/users/{uuid.uuid4()}/active", json={}, headers=ah)).status_code == 422
     assert (await client.patch(f"{A}/users/nope/active", json={"active": False}, headers=ah)).status_code == 422
+
+
+# ---- review fixes ----
+
+async def test_deactivating_a_customer_cancels_their_unanswered_requests(client, db_session):
+    ah = await admin_headers(client, db_session)
+    ch, dh, pid = await setup(client, db_session)
+    b = await create(client, ch, pid)
+    r = await client.patch(f"{A}/users/{await _uid(db_session, '+919876543210')}/active", json={"active": False}, headers=ah)
+    assert r.status_code == 200
+    # the driver can no longer accept a request from someone who cannot log in
+    assert (await client.post(f"{BOOKINGS}/{b['id']}/accept", headers=dh)).status_code == 409
+    seen = (await client.get(f"{BOOKINGS}/{b['id']}", headers=dh)).json()
+    assert seen["status"] == "CANCELLED"
+
+
+async def test_deactivating_a_driver_cancels_their_unanswered_requests(client, db_session):
+    ah = await admin_headers(client, db_session)
+    ch, dh, pid = await setup(client, db_session)
+    b = await create(client, ch, pid)
+    await client.patch(f"{A}/users/{await _uid(db_session, DPHONE)}/active", json={"active": False}, headers=ah)
+    assert (await client.get(f"{BOOKINGS}/{b['id']}", headers=ch)).json()["status"] == "CANCELLED"
+
+
+async def test_a_running_trip_blocks_deactivation_even_after_its_window_passed(client, db_session):
+    from sqlalchemy import update
+
+    from app.models.booking import Booking
+
+    ah = await admin_headers(client, db_session)
+    ch, dh, pid = await setup(client, db_session)
+    await force_status(db_session, DPHONE, availability_status="AVAILABLE")
+    b = await create(client, ch, pid, start_time=datetime.now(UTC).isoformat(), hours=1)
+    for action in ("accept", "start"):
+        await client.post(f"{BOOKINGS}/{b['id']}/{action}", headers=dh)
+    past = datetime.now(UTC) - timedelta(hours=3)
+    await db_session.execute(update(Booking).values(start_time=past, end_time=past + timedelta(hours=1)))
+    await db_session.commit()
+    for phone in (DPHONE, "+919876543210"):
+        r = await client.patch(f"{A}/users/{await _uid(db_session, phone)}/active", json={"active": False}, headers=ah)
+        assert r.status_code == 409

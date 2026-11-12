@@ -228,6 +228,12 @@ async def accept(session: AsyncSession, booking_id: uuid.UUID, driver_id: uuid.U
         session, booking_id, allowed=(BookingStatus.REQUESTED,), to=BookingStatus.ACCEPTED, driver_id=driver_id
     )
     await _driver_in_good_standing(session, driver_id)
+    customer_active = await session.scalar(
+        select(User.is_active).join(CustomerProfile, CustomerProfile.user_id == User.id).where(CustomerProfile.id == booking.customer_id)
+    )
+    if not customer_active:
+        await session.rollback()
+        raise IllegalTransition
     await session.commit()
     return booking
 
