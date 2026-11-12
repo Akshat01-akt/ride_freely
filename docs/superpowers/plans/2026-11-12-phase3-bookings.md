@@ -16,7 +16,7 @@
 - A REQUESTED booking holds the slot and expires 10 minutes after creation if the driver does not answer.
 - A customer may have at most 3 active bookings (stops one customer blocking many slots).
 - Start within 15 minutes of now ("book now"): driver must be AVAILABLE. Later start (up to 30 days): driver must only be APPROVED and not SUSPENDED.
-- Driver status follows the trip: start sets ON_TRIP, complete sets AVAILABLE. A driver may start only from 15 minutes before `start_time`, and only while not SUSPENDED.
+- Driver status follows the trip: start sets ON_TRIP, complete sets OFFLINE (GPS sharing stopped during the trip, so the driver goes online again themselves). A driver may start only from 15 minutes before `start_time`, and only while not SUSPENDED.
 - The other party's phone number is shown only while a booking is ACCEPTED or IN_PROGRESS.
 - Someone else's booking id returns 404, never 403.
 - Nearby search hides drivers who have an active booking overlapping now.

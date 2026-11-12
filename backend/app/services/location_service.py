@@ -81,6 +81,11 @@ async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, l
                 WHERE dp.verification_status = 'APPROVED' AND dp.availability_status = 'AVAILABLE'
                   AND u.is_active AND ST_DWithin(l.location, here.p, :radius)
                   AND l.recorded_at > now() - make_interval(secs => :fresh)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM bookings b
+                    WHERE b.driver_id = dp.id AND b.status IN ('REQUESTED', 'ACCEPTED', 'IN_PROGRESS')
+                      AND b.start_time <= now() AND b.end_time > now()
+                  )
                 ORDER BY distance
                 LIMIT :limit
                 """
