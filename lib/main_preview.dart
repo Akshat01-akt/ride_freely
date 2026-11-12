@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import 'app.dart';
 import 'core/core.dart';
+import 'features/bookings/bookings.dart';
 import 'features/customer/data/sources.dart';
 import 'features/driver/availability_controller.dart';
 import 'features/driver/data/driver_api.dart';
@@ -15,7 +16,8 @@ import 'routes.dart';
 
 class _PreviewLocation implements LocationService {
   @override
-  Future<GeoPoint> current({bool prompt = true}) async => const GeoPoint(latitude: 26.4499, longitude: 80.3319);
+  Future<GeoPoint> current({bool prompt = true}) async =>
+      const GeoPoint(latitude: 26.4499, longitude: 80.3319);
 
   @override
   Future<void> openSettings() async {}
@@ -30,12 +32,21 @@ class _PreviewDriverApi implements DriverApi {
 
   @override
   Future<List<DriverDocument>> documents() async => const [
-        DriverDocument(type: 'LICENCE', status: DocumentStatus.pending),
-        DriverDocument(type: 'ID_PROOF', status: DocumentStatus.rejected, note: 'Photo is blurry. Please upload a clearer one.'),
-      ];
+    DriverDocument(type: 'LICENCE', status: DocumentStatus.pending),
+    DriverDocument(
+      type: 'ID_PROOF',
+      status: DocumentStatus.rejected,
+      note: 'Photo is blurry. Please upload a clearer one.',
+    ),
+  ];
 
   @override
-  Future<void> uploadDocument({required String type, required List<int> bytes, required String filename, required String contentType}) async {}
+  Future<void> uploadDocument({
+    required String type,
+    required List<int> bytes,
+    required String filename,
+    required String contentType,
+  }) async {}
 }
 
 class _PreviewPicker implements DocumentPicker {
@@ -49,10 +60,24 @@ void main() {
   Get.put(DriversController(PreviewDriversSource()), permanent: true);
   Get.put(WalletController(PreviewWalletSource()), permanent: true);
   for (final role in UserRole.values) {
-    final client = ApiClient(baseUrl: 'http://preview.invalid', storage: MemoryTokenStorage());
-    Get.put(AuthController(AuthRepository(client, role)), tag: role.name, permanent: true);
+    Get.put(
+      BookingsController(PreviewBookingsApi()),
+      tag: role.name,
+      permanent: true,
+    );
+    final client = ApiClient(
+      baseUrl: 'http://preview.invalid',
+      storage: MemoryTokenStorage(),
+    );
+    Get.put(
+      AuthController(AuthRepository(client, role)),
+      tag: role.name,
+      permanent: true,
+    );
   }
-  authFor(UserRole.customer).profile.assignAll({'full_name': 'Asha Rao', 'phone': '+919876543210'});
+  authFor(
+    UserRole.customer,
+  ).profile.assignAll({'full_name': 'Asha Rao', 'phone': '+919876543210'});
   authFor(UserRole.driver).profile.assignAll({
     'full_name': 'Ravi Kumar',
     'phone': '+919876500000',
@@ -62,13 +87,26 @@ void main() {
     'verification_status': 'PENDING',
     'rating': '0.00',
   });
-  Get.put(ServerConfig(defaultUrl: 'http://preview.invalid/api/v1', store: MemoryServerStore(), clients: const []), permanent: true);
+  Get.put(
+    ServerConfig(
+      defaultUrl: 'http://preview.invalid/api/v1',
+      store: MemoryServerStore(),
+      clients: const [],
+    ),
+    permanent: true,
+  );
   final api = _PreviewDriverApi();
   Get.put<LocationService>(_PreviewLocation(), permanent: true);
   Get.put<DriverApi>(api, permanent: true);
   Get.put<DocumentPicker>(_PreviewPicker(), permanent: true);
-  Get.put(AvailabilityController(api, Get.find<LocationService>()), permanent: true);
-  Get.put(DocumentsController(api, Get.find<DocumentPicker>()), permanent: true);
+  Get.put(
+    AvailabilityController(api, Get.find<LocationService>()),
+    permanent: true,
+  );
+  Get.put(
+    DocumentsController(api, Get.find<DocumentPicker>()),
+    permanent: true,
+  );
   runApp(const RideFreelyApp());
 
   final driver = PreviewData.drivers.first;
@@ -84,7 +122,8 @@ void main() {
     ('customer_home', Routes.home(UserRole.customer), 0),
     ('drivers', Routes.drivers, 'Hourly'),
     ('driver_details', Routes.driverDetails, driver),
-    ('confirmed', Routes.bookingConfirmed, booking),
+    ('book', Routes.book, driver),
+    ('confirmed', Routes.bookingConfirmed, PreviewBookingsApi.sample()),
     ('tracking', Routes.tracking, booking),
     ('bookings', Routes.home(UserRole.customer), 1),
     ('wallet', Routes.home(UserRole.customer), 2),

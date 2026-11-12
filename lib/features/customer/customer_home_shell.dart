@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/core.dart';
+import '../bookings/bookings.dart';
 import 'data/sources.dart';
 import 'tabs/bookings_tab.dart';
 import 'tabs/home_tab.dart';
@@ -25,6 +26,7 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.find<DriversController>().load();
       Get.find<WalletController>().load();
+      bookingsFor(UserRole.customer).load();
     });
   }
 

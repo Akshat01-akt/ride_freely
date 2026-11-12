@@ -13,7 +13,8 @@ enum BookingState {
   unknown;
 
   /// Holds the driver's time slot.
-  bool get isActive => this == requested || this == accepted || this == inProgress;
+  bool get isActive =>
+      this == requested || this == accepted || this == inProgress;
 
   static BookingState fromServer(String value) => switch (value) {
     'REQUESTED' => requested,
@@ -66,7 +67,9 @@ class Booking {
     return Booking(
       id: j['id'] as String,
       state: BookingState.fromServer(j['status'] as String),
-      type: j['booking_type'] == 'FULL_DAY' ? BookingType.fullDay : BookingType.hourly,
+      type: j['booking_type'] == 'FULL_DAY'
+          ? BookingType.fullDay
+          : BookingType.hourly,
       start: DateTime.parse(j['start_time'] as String).toUtc(),
       end: DateTime.parse(j['end_time'] as String).toUtc(),
       hours: (j['hours'] as num).toInt(),
@@ -101,15 +104,31 @@ class Booking {
   final String? customerPhone;
 }
 
-const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-String _hm(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+String _hm(DateTime t) =>
+    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
 /// "Sat 5 Jan, 10:00 - 12:00" in the phone's local time.
 String formatWindow(DateTime start, DateTime end) {
   final s = start.toLocal(), e = end.toLocal();
   final sameDay = s.year == e.year && s.month == e.month && s.day == e.day;
   final day = '${_days[s.weekday - 1]} ${s.day} ${_months[s.month - 1]}';
-  return sameDay ? '$day, ${_hm(s)} - ${_hm(e)}' : '$day ${_hm(s)} - ${_days[e.weekday - 1]} ${e.day} ${_months[e.month - 1]} ${_hm(e)}';
+  return sameDay
+      ? '$day, ${_hm(s)} - ${_hm(e)}'
+      : '$day ${_hm(s)} - ${_days[e.weekday - 1]} ${e.day} ${_months[e.month - 1]} ${_hm(e)}';
 }

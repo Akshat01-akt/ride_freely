@@ -4,7 +4,9 @@ import 'package:get/get.dart';
 import '../../core/core.dart';
 import '../../routes.dart';
 import '../auth/auth_scaffold.dart';
+import '../bookings/bookings.dart';
 import 'availability_controller.dart';
+import 'requests_tab.dart';
 
 class DriverHomeShell extends StatefulWidget {
   const DriverHomeShell({super.key});
@@ -17,15 +19,19 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => bookingsFor(UserRole.driver).load(),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final auth = authFor(UserRole.driver);
     final tabs = <Widget>[
       _DashboardTab(auth: auth),
-      const EmptyState(
-        icon: Icons.notifications_none_rounded,
-        title: 'No requests yet',
-        body: 'Booking requests from nearby customers will show up here.',
-      ),
+      const RequestsTab(),
       const EmptyState(
         icon: Icons.account_balance_wallet_outlined,
         title: 'Nothing earned yet',

@@ -13,7 +13,8 @@ import 'package:ride_freely/features/customer/data/sources.dart';
 
 /// Continuous animations never settle, so tests run with the OS reduce-motion setting on.
 void reduceMotionFor(WidgetTester t, {Size size = const Size(390, 844)}) {
-  t.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
+  t.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
   // Lists build lazily, so tests need a phone-sized window rather than the 800x600 default.
   t.view.physicalSize = size;
@@ -22,7 +23,10 @@ void reduceMotionFor(WidgetTester t, {Size size = const Size(390, 844)}) {
 }
 
 class FakeLocationService implements LocationService {
-  FakeLocationService({this.point = const GeoPoint(latitude: 26.4499, longitude: 80.3319), this.error});
+  FakeLocationService({
+    this.point = const GeoPoint(latitude: 26.4499, longitude: 80.3319),
+    this.error,
+  });
 
   GeoPoint point;
   LocationException? error;
@@ -75,15 +79,29 @@ class FakeDriverApi implements DriverApi {
   }
 
   @override
-  Future<void> uploadDocument({required String type, required List<int> bytes, required String filename, required String contentType}) async {
+  Future<void> uploadDocument({
+    required String type,
+    required List<int> bytes,
+    required String filename,
+    required String contentType,
+  }) async {
     calls.add('upload:$type:${bytes.length}');
     if (uploadError != null) throw uploadError!;
-    docs = [...docs.where((d) => d.type != type), DriverDocument(type: type, status: DocumentStatus.pending)];
+    docs = [
+      ...docs.where((d) => d.type != type),
+      DriverDocument(type: type, status: DocumentStatus.pending),
+    ];
   }
 }
 
 class FakePicker implements DocumentPicker {
-  FakePicker([this.file = const PickedDocument(bytes: [1, 2, 3], filename: 'photo.jpg', contentType: 'image/jpeg')]);
+  FakePicker([
+    this.file = const PickedDocument(
+      bytes: [1, 2, 3],
+      filename: 'photo.jpg',
+      contentType: 'image/jpeg',
+    ),
+  ]);
 
   PickedDocument? file;
   int calls = 0;
@@ -112,11 +130,31 @@ class FakeDriversSource implements DriversSource {
 class FakeBookingsApi implements BookingsApi {
   FakeBookingsApi([List<Booking>? items]) : items = items ?? [];
 
-  static Booking booking({String id = 'b1', BookingState state = BookingState.requested, String driver = 'Ravi Kumar', String customer = 'Asha Rao', String? driverPhone, String? customerPhone}) => Booking(
-        id: id, state: state, type: BookingType.hourly, start: DateTime.utc(2030, 1, 5, 10), end: DateTime.utc(2030, 1, 5, 12), hours: 2,
-        price: '360.00', address: '12 MG Road', expiresAt: DateTime.utc(2030, 1, 1, 10, 10), driverId: 'd1', driverName: driver,
-        customerName: customer, driverPhone: driverPhone, customerPhone: customerPhone,
-      );
+  static Booking booking({
+    String id = 'b1',
+    BookingState state = BookingState.requested,
+    String driver = 'Ravi Kumar',
+    String customer = 'Asha Rao',
+    String? driverPhone,
+    String? customerPhone,
+    String? notes,
+  }) => Booking(
+    id: id,
+    state: state,
+    type: BookingType.hourly,
+    start: DateTime.utc(2030, 1, 5, 10),
+    end: DateTime.utc(2030, 1, 5, 12),
+    hours: 2,
+    price: '360.00',
+    address: '12 MG Road',
+    expiresAt: DateTime.utc(2030, 1, 1, 10, 10),
+    driverId: 'd1',
+    driverName: driver,
+    customerName: customer,
+    driverPhone: driverPhone,
+    customerPhone: customerPhone,
+    notes: notes,
+  );
 
   List<Booking> items;
   Object? error;
@@ -133,8 +171,22 @@ class FakeBookingsApi implements BookingsApi {
   }
 
   @override
-  Future<Booking> create({required String driverId, required BookingType type, DateTime? start, int? hours, required String address, String? notes}) async {
-    created.add({'driverId': driverId, 'type': type, 'start': start, 'hours': hours, 'address': address, 'notes': notes});
+  Future<Booking> create({
+    required String driverId,
+    required BookingType type,
+    DateTime? start,
+    int? hours,
+    required String address,
+    String? notes,
+  }) async {
+    created.add({
+      'driverId': driverId,
+      'type': type,
+      'start': start,
+      'hours': hours,
+      'address': address,
+      'notes': notes,
+    });
     if (error != null) throw error!;
     final b = booking(id: 'new${created.length}');
     items = [b, ...items];
@@ -155,14 +207,22 @@ class FakeBookingsApi implements BookingsApi {
       BookingAction.complete => BookingState.completed,
     };
     final old = items.firstWhere((b) => b.id == id);
-    final updated = booking(id: id, state: next, driver: old.driverName, customer: old.customerName);
+    final updated = booking(
+      id: id,
+      state: next,
+      driver: old.driverName,
+      customer: old.customerName,
+    );
     items = [for (final b in items) b.id == id ? updated : b];
     return updated;
   }
 }
 
 class FakeWalletSource implements WalletSource {
-  FakeWalletSource({this.data = const WalletData(), this.bookingList = const []});
+  FakeWalletSource({
+    this.data = const WalletData(),
+    this.bookingList = const [],
+  });
   final WalletData data;
   final List<BookingSummary> bookingList;
 
@@ -173,7 +233,6 @@ class FakeWalletSource implements WalletSource {
   Future<List<BookingSummary>> bookings() async => bookingList;
 }
 
-
 /// Repository that never touches the network.
 class FakeAuthRepository extends AuthRepository {
   FakeAuthRepository(
@@ -183,7 +242,10 @@ class FakeAuthRepository extends AuthRepository {
     this.loginException,
     this.registerException,
     this.verification = 'PENDING',
-  }) : super(ApiClient(baseUrl: 'http://fake', storage: MemoryTokenStorage()), role);
+  }) : super(
+         ApiClient(baseUrl: 'http://fake', storage: MemoryTokenStorage()),
+         role,
+       );
 
   final bool hasToken;
   final String? loginError;
@@ -243,22 +305,32 @@ class Fakes {
     List<DriverSummary> drivers = const [],
     Object? driversError,
     WalletSource? wallet,
-  })  : driverApi = driverApi ?? FakeDriverApi(),
-        location = location ?? FakeLocationService(),
-        picker = picker ?? FakePicker(),
-        driversSource = FakeDriversSource(drivers)..error = driversError,
-        walletSource = wallet ?? FakeWalletSource(),
-        customer = customer ?? FakeAuthRepository(UserRole.customer),
-        driver = driver ?? FakeAuthRepository(UserRole.driver),
-        roleStore = MemoryRoleStore(storedRole);
+    FakeBookingsApi? customerBookings,
+    FakeBookingsApi? driverBookings,
+  }) : customerBookings = customerBookings ?? FakeBookingsApi(),
+       driverBookings = driverBookings ?? FakeBookingsApi(),
+       driverApi = driverApi ?? FakeDriverApi(),
+       location = location ?? FakeLocationService(),
+       picker = picker ?? FakePicker(),
+       driversSource = FakeDriversSource(drivers)..error = driversError,
+       walletSource = wallet ?? FakeWalletSource(),
+       customer = customer ?? FakeAuthRepository(UserRole.customer),
+       driver = driver ?? FakeAuthRepository(UserRole.driver),
+       roleStore = MemoryRoleStore(storedRole);
 
   final bool onboardingDone;
+  final FakeBookingsApi customerBookings;
+  final FakeBookingsApi driverBookings;
   final FakeDriverApi driverApi;
   final FakeLocationService location;
   final FakePicker picker;
   final FakeDriversSource driversSource;
   final WalletSource walletSource;
-  final ServerConfig serverConfig = ServerConfig(defaultUrl: 'http://default.test/api/v1', store: MemoryServerStore(), clients: []);
+  final ServerConfig serverConfig = ServerConfig(
+    defaultUrl: 'http://default.test/api/v1',
+    store: MemoryServerStore(),
+    clients: [],
+  );
   final FakeAuthRepository customer;
   final FakeAuthRepository driver;
   final MemoryRoleStore roleStore;
@@ -273,10 +345,18 @@ class Fakes {
     Get.put<DriverApi>(driverApi);
     Get.put<LocationService>(location);
     Get.put<DocumentPicker>(picker);
-    Get.put(AvailabilityController(driverApi, location, interval: const Duration(hours: 1)));
+    Get.put(
+      AvailabilityController(
+        driverApi,
+        location,
+        interval: const Duration(hours: 1),
+      ),
+    );
     Get.put(DocumentsController(driverApi, picker));
     Get.put(DriversController(driversSource));
     Get.put(WalletController(walletSource));
+    Get.put(BookingsController(customerBookings), tag: UserRole.customer.name);
+    Get.put(BookingsController(driverBookings), tag: UserRole.driver.name);
     Get.put(AuthController(customer), tag: UserRole.customer.name);
     Get.put(AuthController(driver), tag: UserRole.driver.name);
   }

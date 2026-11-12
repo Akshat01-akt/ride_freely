@@ -14,6 +14,7 @@ abstract final class Routes {
   // Customer-only screens
   static const drivers = '/customer/drivers';
   static const driverDetails = '/customer/driver';
+  static const book = '/customer/book';
   static const bookingConfirmed = '/customer/confirmed';
   static const tracking = '/customer/tracking';
 }

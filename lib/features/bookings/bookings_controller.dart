@@ -24,7 +24,8 @@ class BookingsController extends GetxController {
   List<Booking> get upcoming => items.where((b) => b.state.isActive).toList();
   List<Booking> get past => items.where((b) => !b.state.isActive).toList();
 
-  static String _message(Object e) => e is ApiException ? e.message : 'Something went wrong. Please try again.';
+  static String _message(Object e) =>
+      e is ApiException ? e.message : 'Something went wrong. Please try again.';
 
   Future<void> load() async {
     loading.value = true;
@@ -51,7 +52,14 @@ class BookingsController extends GetxController {
     actingId.value = 'new';
     actionError.value = null;
     try {
-      final booking = await _api.create(driverId: driverId, type: type, start: start, hours: hours, address: address, notes: notes);
+      final booking = await _api.create(
+        driverId: driverId,
+        type: type,
+        start: start,
+        hours: hours,
+        address: address,
+        notes: notes,
+      );
       items.insert(0, booking);
       return booking;
     } catch (e) {
@@ -83,4 +91,5 @@ class BookingsController extends GetxController {
   }
 }
 
-BookingsController bookingsFor(UserRole role) => Get.find<BookingsController>(tag: role.name);
+BookingsController bookingsFor(UserRole role) =>
+    Get.find<BookingsController>(tag: role.name);

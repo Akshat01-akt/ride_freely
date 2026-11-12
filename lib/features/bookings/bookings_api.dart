@@ -20,8 +20,9 @@ class HttpBookingsApi implements BookingsApi {
   final ApiClient _client;
 
   @override
-  Future<List<Booking>> list() async =>
-      (await _client.getList('/bookings')).cast<Map<String, dynamic>>().map(Booking.fromJson).toList();
+  Future<List<Booking>> list() async => (await _client.getList(
+    '/bookings',
+  )).cast<Map<String, dynamic>>().map(Booking.fromJson).toList();
 
   @override
   Future<Booking> create({
@@ -47,5 +48,7 @@ class HttpBookingsApi implements BookingsApi {
 
   @override
   Future<Booking> act(String id, BookingAction action) async =>
-      Booking.fromJson(await _client.postJson('/bookings/$id/${action.name}', {}));
+      Booking.fromJson(
+        await _client.postJson('/bookings/$id/${action.name}', {}),
+      );
 }

@@ -87,16 +87,16 @@ void main() {
     expect(t.getTopLeft(find.text('Vikash Sharma')).dy, lessThan(t.getTopLeft(find.text('Amit Kumar')).dy));
   });
 
-  testWidgets('driver details show the profile and booking is honest that it is not live yet', (t) async {
+  testWidgets('driver details show the profile and lead to the booking form', (t) async {
     await _pump(t, drivers: [_amit]);
     await _openDrivers(t);
     await t.tap(find.text('Amit Kumar'));
     await t.pumpAndSettle();
     expect(find.text('Safe and punctual.'), findsOneWidget);
     expect(find.text('Verified'), findsOneWidget);
-    await t.tap(find.widgetWithText(AppButton, 'Book now'));
-    await t.pump();
-    expect(find.textContaining('Booking opens in the next release'), findsOneWidget);
+    await t.tap(find.widgetWithText(AppButton, 'Book this driver'));
+    await t.pumpAndSettle();
+    expect(find.text('Book Amit Kumar'), findsOneWidget);
   });
 
   testWidgets('expandable sections open and close', (t) async {
@@ -110,13 +110,20 @@ void main() {
     expect(find.textContaining('Choose a start time'), findsOneWidget);
   });
 
-  testWidgets('booking confirmation leads to tracking, which fakes no location or ETA', (t) async {
+  testWidgets('a sent request says it is waiting for the driver and links to My bookings', (t) async {
     await _pump(t);
-    Get.toNamed(Routes.bookingConfirmed, arguments: const BookingSummary(id: 'DR1', driver: _amit, status: BookingStatus.assigned));
+    Get.toNamed(Routes.bookingConfirmed, arguments: FakeBookingsApi.booking());
     await t.pumpAndSettle();
-    expect(find.text('Booking confirmed!'), findsOneWidget);
-    expect(find.text('#DR1'), findsOneWidget);
-    await t.tap(find.text('Track ride'));
+    expect(find.text('Request sent'), findsOneWidget);
+    expect(find.text('Booking confirmed!'), findsNothing);
+    await t.tap(find.text('View my bookings'));
+    await t.pumpAndSettle();
+    expect(find.text('My bookings'), findsOneWidget);
+  });
+
+  testWidgets('tracking fakes no location or ETA when the booking carries none', (t) async {
+    await _pump(t);
+    Get.toNamed(Routes.tracking, arguments: const BookingSummary(id: 'DR1', driver: _amit, status: BookingStatus.assigned));
     await t.pumpAndSettle();
     expect(find.text("Waiting for your driver's live location."), findsOneWidget);
     expect(find.textContaining('Arriving in'), findsNothing);
@@ -147,16 +154,6 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('₹850'), findsOneWidget);
     expect(find.text('+₹500'), findsOneWidget);
-  });
-
-  testWidgets('bookings tab lists real bookings and switches to Past', (t) async {
-    await _pump(t, wallet: FakeWalletSource(bookingList: const [BookingSummary(id: 'DR9', driver: _amit, status: BookingStatus.onTheWay)]));
-    await t.tap(find.text('Bookings'));
-    await t.pumpAndSettle();
-    expect(find.text('Booking #DR9'), findsOneWidget);
-    await t.tap(find.text('Past'));
-    await t.pumpAndSettle();
-    expect(find.text('No past bookings'), findsOneWidget);
   });
 
   testWidgets('profile menu jumps to the wallet tab', (t) async {
