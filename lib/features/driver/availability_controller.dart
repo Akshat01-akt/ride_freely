@@ -25,20 +25,25 @@ class AvailabilityController extends GetxController {
 
   Timer? _timer;
 
+  // Bumped on every online/offline change. A reply that belongs to an earlier session is ignored.
+  int _epoch = 0;
+  bool _inFlight = false;
+
   bool get sending => _timer != null;
 
   Future<void> setOnline(bool want) async {
     if (busy.value) return;
     busy.value = true;
+    final epoch = ++_epoch;
     error.value = null;
     try {
-      want ? await _goOnline() : await _goOffline();
+      want ? await _goOnline(epoch) : await _goOffline();
     } finally {
       busy.value = false;
     }
   }
 
-  Future<void> _goOnline() async {
+  Future<void> _goOnline(int epoch) async {
     try {
       // Check we can get a position before telling the server we are available.
       await _location.current();
@@ -50,9 +55,21 @@ class AvailabilityController extends GetxController {
       error.value = e.message;
       return;
     }
+    if (epoch != _epoch) {
+      // Logged out (or switched off) while the request was in flight: do not start sharing.
+      return;
+    }
     online.value = true;
     _startSending();
     await sendOnce();
+  }
+
+  /// Stops sharing at once, even if a switch request is still running (used on logout).
+  void forceOffline() {
+    _epoch++;
+    _stopSending();
+    online.value = false;
+    warning.value = null;
   }
 
   Future<void> _goOffline() async {
@@ -75,13 +92,17 @@ class AvailabilityController extends GetxController {
   }
 
   Future<void> sendOnce() async {
+    if (_inFlight) return; // the previous update has not finished; never overlap
+    _inFlight = true;
+    final epoch = _epoch;
     try {
-      final point = await _location.current();
+      final point = await _location.current(prompt: false);
       await _api.sendLocation(point);
-      warning.value = null;
+      if (epoch == _epoch) warning.value = null;
     } on LocationException catch (e) {
-      warning.value = e.message;
+      if (epoch == _epoch) warning.value = e.message;
     } on ApiException catch (e) {
+      if (epoch != _epoch) return;
       final refused = e.statusCode == 403 || e.statusCode == 409;
       if (refused) {
         // The server no longer lets us share (suspended, rejected, or already offline).
@@ -92,6 +113,8 @@ class AvailabilityController extends GetxController {
       } else {
         warning.value = e.message;
       }
+    } finally {
+      _inFlight = false;
     }
   }
 
@@ -101,6 +124,7 @@ class AvailabilityController extends GetxController {
   }
 
   void _stopSending() {
+    _epoch++;
     _timer?.cancel();
     _timer = null;
   }

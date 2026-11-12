@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_freely/core/core.dart';
 import 'package:ride_freely/features/driver/availability_controller.dart';
@@ -121,6 +123,61 @@ void main() {
     final m = _make();
     await Future.wait([m.c.setOnline(true), m.c.setOnline(true)]);
     expect(m.api.calls.where((c) => c == 'setAvailability:true').length, 1);
+    m.c.onClose();
+  });
+
+  test('an update still in flight is not repeated by the next tick', () async {
+    final m = _make();
+    await m.c.setOnline(true);
+    m.api.calls.clear();
+    m.api.sendGate = Completer<void>();
+    final first = m.c.sendOnce();
+    await m.c.sendOnce(); // returns at once: one is already running
+    expect(m.api.calls, ['sendLocation']);
+    m.api.sendGate!.complete();
+    await first;
+    m.c.onClose();
+  });
+
+  test('a late refusal from an earlier online session cannot switch off a newer one', () async {
+    final m = _make();
+    await m.c.setOnline(true);
+    final gate = m.api.sendGate = Completer<void>();
+    final stale = m.c.sendOnce(); // session 1: waiting for the server
+    await Future<void>.delayed(Duration.zero);
+    await m.c.setOnline(false);
+    m.api.sendGate = null;
+    await m.c.setOnline(true); // session 2
+    expect(m.c.online.value, isTrue);
+    // the old request now comes back with a refusal
+    m.api.locationError = const ApiException('Go online before sharing your location', statusCode: 409);
+    gate.complete();
+    await stale;
+    expect(m.c.online.value, isTrue);
+    expect(m.c.sending, isTrue);
+    expect(m.c.error.value, isNull);
+    m.c.onClose();
+  });
+
+  test('forcing offline while going online still ends sharing (logout during startup)', () async {
+    final m = _make();
+    m.api.availabilityGate = Completer<void>();
+    final starting = m.c.setOnline(true);
+    await Future<void>.delayed(Duration.zero);
+    m.c.forceOffline();
+    m.api.availabilityGate!.complete();
+    await starting;
+    expect(m.c.sending, isFalse);
+    expect(m.c.online.value, isFalse);
+  });
+
+  test('only the first position check asks for permission; later ticks never re-prompt', () async {
+    final m = _make();
+    await m.c.setOnline(true);
+    await m.c.sendOnce();
+    await m.c.sendOnce();
+    expect(m.loc.prompts.first, isTrue);
+    expect(m.loc.prompts.skip(1).every((p) => !p), isTrue);
     m.c.onClose();
   });
 }

@@ -240,8 +240,10 @@ class _ProfileTab extends StatelessWidget {
       ),
     );
     if (ok != true) return;
-    // Tell the server we are offline while the session is still valid.
-    await Get.find<AvailabilityController>().setOnline(false);
+    // Stop sharing immediately, then tell the server while the session is still valid.
+    final availability = Get.find<AvailabilityController>();
+    availability.forceOffline();
+    await availability.setOnline(false);
     await auth.logout();
     Get.offAllNamed(Routes.login(UserRole.driver));
   }

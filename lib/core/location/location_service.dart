@@ -30,7 +30,8 @@ class LocationException implements Exception {
 
 /// Where the phone is right now. Behind an interface so screens can be tested without a GPS.
 abstract class LocationService {
-  Future<GeoPoint> current();
+  /// [prompt] false means never show the permission dialog (used by background-ish repeating calls).
+  Future<GeoPoint> current({bool prompt = true});
 
   /// Opens the phone's settings so the user can allow location (or turn it on).
   Future<void> openSettings();
@@ -47,15 +48,15 @@ class GeolocatorLocationService implements LocationService {
   }
 
   @override
-  Future<GeoPoint> current() async {
+  Future<GeoPoint> current({bool prompt = true}) async {
     if (!await Geolocator.isLocationServiceEnabled()) throw const LocationException(LocationProblem.servicesOff);
     var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied && prompt) permission = await Geolocator.requestPermission();
     if (permission == LocationPermission.denied) throw const LocationException(LocationProblem.denied);
     if (permission == LocationPermission.deniedForever) throw const LocationException(LocationProblem.deniedForever);
     try {
       final p = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 12)),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 8)),
       );
       return GeoPoint(
         latitude: p.latitude,

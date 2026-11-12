@@ -15,7 +15,7 @@ import 'routes.dart';
 
 class _PreviewLocation implements LocationService {
   @override
-  Future<GeoPoint> current() async => const GeoPoint(latitude: 26.4499, longitude: 80.3319);
+  Future<GeoPoint> current({bool prompt = true}) async => const GeoPoint(latitude: 26.4499, longitude: 80.3319);
 
   @override
   Future<void> openSettings() async {}

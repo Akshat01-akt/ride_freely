@@ -64,6 +64,7 @@ class DocumentsController extends GetxController {
       final list = await _api.documents();
       docs.assignAll({for (final d in list) d.type: d});
     } on ApiException catch (e) {
+      docs.clear(); // never keep showing another account's documents after a failed refresh
       error.value = e.message;
     } finally {
       loading.value = false;

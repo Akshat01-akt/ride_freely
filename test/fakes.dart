@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_freely/core/core.dart';
@@ -25,13 +27,15 @@ class FakeLocationService implements LocationService {
   LocationException? error;
   int calls = 0;
   int settingsOpened = 0;
+  final prompts = <bool>[];
 
   @override
   Future<void> openSettings() async => settingsOpened++;
 
   @override
-  Future<GeoPoint> current() async {
+  Future<GeoPoint> current({bool prompt = true}) async {
     calls++;
+    prompts.add(prompt);
     if (error != null) throw error!;
     return point;
   }
@@ -42,22 +46,32 @@ class FakeDriverApi implements DriverApi {
   ApiException? availabilityError;
   ApiException? locationError;
   ApiException? uploadError;
+  ApiException? documentsError;
   List<DriverDocument> docs = const [];
+
+  /// When set, setAvailability / sendLocation wait for it, so tests can interleave calls.
+  Completer<void>? availabilityGate;
+  Completer<void>? sendGate;
 
   @override
   Future<void> setAvailability(bool online) async {
     calls.add('setAvailability:$online');
+    await availabilityGate?.future;
     if (availabilityError != null) throw availabilityError!;
   }
 
   @override
   Future<void> sendLocation(GeoPoint point) async {
     calls.add('sendLocation');
+    await sendGate?.future;
     if (locationError != null) throw locationError!;
   }
 
   @override
-  Future<List<DriverDocument>> documents() async => docs;
+  Future<List<DriverDocument>> documents() async {
+    if (documentsError != null) throw documentsError!;
+    return docs;
+  }
 
   @override
   Future<void> uploadDocument({required String type, required List<int> bytes, required String filename, required String contentType}) async {

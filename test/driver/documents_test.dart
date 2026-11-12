@@ -110,4 +110,15 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Driving licence'), findsOneWidget);
   });
+
+  test('a failed refresh clears the previous driver’s documents instead of showing them', () async {
+    final api = FakeDriverApi()..docs = const [DriverDocument(type: 'LICENCE', status: DocumentStatus.approved)];
+    final c = DocumentsController(api, FakePicker());
+    await c.load();
+    expect(c.docs, isNotEmpty);
+    api.documentsError = const ApiException('Cannot reach the server. Check your connection and try again.');
+    await c.load();
+    expect(c.docs, isEmpty);
+    expect(c.error.value, contains('Cannot reach'));
+  });
 }
