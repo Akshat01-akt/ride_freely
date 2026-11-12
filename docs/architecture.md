@@ -134,6 +134,16 @@ Customer requests booking
 
 Booking state machine: SEARCHING, REQUESTED, ACCEPTED, CONFIRMED, DRIVER_ARRIVING, ARRIVED, IN_PROGRESS, COMPLETED, plus terminal CANCELLED, EXPIRED, REJECTED. Transitions are validated in one place and written to `booking_status_history`.
 
+### As built in Phase 3
+
+The first version is simpler than the full flow above, and the database is the single source of truth:
+
+- The customer picks one driver (from nearby search) and sends a request: `POST /bookings`. States: `REQUESTED -> ACCEPTED -> IN_PROGRESS -> COMPLETED`, with `REJECTED`, `CANCELLED` (customer) and `EXPIRED` (no answer in 10 minutes).
+- No ranking or auto-assign yet, no Redis lock and no Celery: the exclusion constraint `bookings_no_driver_overlap` on `(driver_id, tstzrange(start_time, end_time))` for `REQUESTED/ACCEPTED/IN_PROGRESS` refuses an overlapping slot, and each state change locks the booking row (`SELECT ... FOR UPDATE`). Unanswered requests are expired lazily when a driver's or customer's bookings are read or written.
+- Price is hours x the driver's hourly rate, fixed at request time (full day = 8 hours). Nothing is charged; payments come later.
+- A booking's other party sees a phone number only while it is `ACCEPTED` or `IN_PROGRESS`.
+- Not built yet: status history table, idempotency keys, push/WebSocket notifications, live tracking, reassigning to the next driver on rejection.
+
 ### Double-booking protection (layered)
 1. Redis lock with a unique token and Lua compare-and-delete release (short-lived reservation only).
 2. PostgreSQL transaction for the final confirmation (source of truth).

@@ -39,7 +39,7 @@ curl -X POST localhost/api/v1/auth/admin/login -H 'content-type: application/jso
 #   PATCH /api/v1/admin/drivers/{driver_id}/suspension    {"suspended": true}
 ```
 
-Driver flow: register, upload documents, admin approves, driver goes online (location is shared every 10 s while the app is open), customers see the driver in nearby search (5 km by default).
+Driver flow: register, upload documents, admin approves, driver goes online (location is shared every 10 s while the app is open), customers see the driver in nearby search (5 km by default). Booking flow: the customer sends a request, the driver accepts or declines in the Requests tab, then starts and completes the trip; the customer can cancel until it starts.
 
 ## Backend tests
 
