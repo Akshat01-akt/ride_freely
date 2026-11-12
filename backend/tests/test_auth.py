@@ -164,3 +164,10 @@ async def test_unicode_digits_and_foreign_or_malformed_numbers_are_rejected(clie
     for bad in ("९८७६५४३२१०", "+91 0 9876543210", "+919876543210123", "+1234567890", "5876543210"):
         r = await client.post("/api/v1/auth/customer/register", json={**CUSTOMER, "phone": bad})
         assert r.status_code == 422, bad
+
+
+async def test_validation_errors_never_echo_submitted_values(client):
+    r = await client.post("/api/v1/auth/customer/register", json={**CUSTOMER, "password": "short-pw"[:7]})
+    assert r.status_code == 422
+    assert "short-p" not in r.text
+    assert all(set(e) <= {"loc", "msg", "type"} for e in r.json()["detail"])

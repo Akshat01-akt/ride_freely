@@ -86,3 +86,14 @@ class DocumentOut(BaseModel):
 
 class AvailabilityRequest(BaseModel):
     status: Literal["AVAILABLE", "OFFLINE"]
+
+
+_Finite = {"allow_inf_nan": False}
+
+
+class LocationUpdate(BaseModel):
+    latitude: Annotated[float, Field(ge=-90, le=90, **_Finite)]
+    longitude: Annotated[float, Field(ge=-180, le=180, **_Finite)]
+    heading: Annotated[float | None, Field(ge=0, le=360, **_Finite)] = None
+    speed: Annotated[float | None, Field(ge=0, **_Finite)] = None
+    accuracy: Annotated[float | None, Field(ge=0, **_Finite)] = None
