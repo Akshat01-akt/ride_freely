@@ -9,6 +9,7 @@ import 'features/customer/driver_details_page.dart';
 import 'features/customer/drivers_page.dart';
 import 'features/customer/tracking_page.dart';
 import 'features/customer/customer_register_page.dart';
+import 'features/driver/documents_page.dart';
 import 'features/driver/driver_home_shell.dart';
 import 'features/driver/driver_register_page.dart';
 import 'features/onboarding/onboarding_page.dart';
@@ -31,6 +32,7 @@ class RideFreelyApp extends StatelessWidget {
         getPages: [
           GetPage(name: Routes.splash, page: SplashPage.new),
           GetPage(name: Routes.onboarding, page: OnboardingPage.new),
+          GetPage(name: Routes.documents, page: () => RoleTheme(role: UserRole.driver, child: const DocumentsPage())),
           GetPage(name: Routes.drivers, page: () => RoleTheme(role: UserRole.customer, child: const DriversPage())),
           GetPage(name: Routes.driverDetails, page: () => RoleTheme(role: UserRole.customer, child: const DriverDetailsPage())),
           GetPage(name: Routes.bookingConfirmed, page: () => RoleTheme(role: UserRole.customer, child: const BookingConfirmedPage())),

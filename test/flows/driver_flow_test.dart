@@ -106,6 +106,7 @@ void main() {
     await t.tap(find.byType(Switch));
     await t.pumpAndSettle();
     expect(find.text('You are online'), findsOneWidget);
+    Get.deleteAll(force: true); // closes controllers, stopping the location timer, before the test ends
   });
 
   testWidgets('log out from profile returns to login', (t) async {
@@ -128,5 +129,62 @@ void main() {
     await t.tap(find.widgetWithText(TextButton, 'Stay'));
     await t.pumpAndSettle();
     expect(find.byType(LoginPage), findsNothing);
+  });
+
+  testWidgets('going online calls the server and starts sharing location', (t) async {
+    final f = Fakes(storedRole: UserRole.driver, driver: FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'APPROVED'));
+    reduceMotionFor(t);
+    f.install();
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
+    await t.tap(find.byType(Switch));
+    await t.pumpAndSettle();
+    expect(f.driverApi.calls, ['setAvailability:true', 'sendLocation']);
+    expect(find.text('You are online'), findsOneWidget);
+    Get.deleteAll(force: true); // closes controllers, stopping the location timer, before the test ends
+  });
+
+  testWidgets('a server rejection puts the switch back to offline and explains why', (t) async {
+    final api = FakeDriverApi()..availabilityError = const ApiException('Your documents must be approved before you can go online', statusCode: 403);
+    final f = Fakes(storedRole: UserRole.driver, driver: FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'APPROVED'), driverApi: api);
+    reduceMotionFor(t);
+    f.install();
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
+    await t.tap(find.byType(Switch));
+    await t.pumpAndSettle();
+    expect(find.text('You are offline'), findsOneWidget);
+    expect(find.textContaining('documents must be approved'), findsOneWidget);
+  });
+
+  testWidgets('denied location permission is explained and the driver stays offline', (t) async {
+    final loc = FakeLocationService(error: const LocationException(LocationProblem.denied));
+    final f = Fakes(storedRole: UserRole.driver, driver: FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'APPROVED'), location: loc);
+    reduceMotionFor(t);
+    f.install();
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
+    await t.tap(find.byType(Switch));
+    await t.pumpAndSettle();
+    expect(find.text('You are offline'), findsOneWidget);
+    expect(find.textContaining('Location permission is needed'), findsOneWidget);
+    expect(f.driverApi.calls, isEmpty);
+  });
+
+  testWidgets('logging out while online tells the server the driver is offline', (t) async {
+    final f = Fakes(storedRole: UserRole.driver, driver: FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'APPROVED'));
+    reduceMotionFor(t);
+    f.install();
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
+    await t.tap(find.byType(Switch));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Profile'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Log out'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(TextButton, 'Log out'));
+    await t.pumpAndSettle();
+    expect(f.driverApi.calls.last, 'setAvailability:false');
   });
 }

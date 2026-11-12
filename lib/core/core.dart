@@ -11,3 +11,4 @@ export 'auth/auth_scope.dart';
 export 'role/role_store.dart';
 export 'role/onboarding_store.dart';
 export 'preview.dart';
+export 'location/location_service.dart';

@@ -9,6 +9,9 @@ class AuthRepository {
   final ApiClient _client;
   final UserRole role;
 
+  /// The authenticated HTTP client for this role, for feature-specific API calls.
+  ApiClient get client => _client;
+
   String get _prefix => '/auth/${role.name}';
 
   Future<void> register(Map<String, dynamic> fields) async {

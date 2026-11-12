@@ -44,6 +44,9 @@ class ApiClient {
     final tokens = await storage.read();
     options.headers['Authorization'] = 'Bearer ${tokens!.accessToken}';
     options.extra['retried'] = true;
+    // A multipart body can only be sent once; the retry needs a fresh copy.
+    final body = options.data;
+    if (body is FormData) options.data = body.clone();
     try {
       handler.resolve(await dio.fetch<dynamic>(options));
     } on DioException catch (retryError) {
@@ -69,15 +72,27 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> getJson(String path) => _send(() => dio.get<Map<String, dynamic>>(path));
+  Future<Map<String, dynamic>> getJson(String path) async => _asMap(await _send(() => dio.get<dynamic>(path)));
 
-  Future<Map<String, dynamic>> postJson(String path, Map<String, dynamic> body) =>
-      _send(() => dio.post<Map<String, dynamic>>(path, data: body));
+  Future<List<dynamic>> getList(String path) async {
+    final data = await _send(() => dio.get<dynamic>(path));
+    return data is List ? data : <dynamic>[];
+  }
 
-  Future<Map<String, dynamic>> _send(Future<Response<Map<String, dynamic>>> Function() call) async {
+  Future<Map<String, dynamic>> postJson(String path, Map<String, dynamic> body) async =>
+      _asMap(await _send(() => dio.post<dynamic>(path, data: body)));
+
+  Future<Map<String, dynamic>> patchJson(String path, Map<String, dynamic> body) async =>
+      _asMap(await _send(() => dio.patch<dynamic>(path, data: body)));
+
+  Future<Map<String, dynamic>> postForm(String path, FormData form) async =>
+      _asMap(await _send(() => dio.post<dynamic>(path, data: form)));
+
+  static Map<String, dynamic> _asMap(dynamic data) => data is Map<String, dynamic> ? data : <String, dynamic>{};
+
+  Future<dynamic> _send(Future<Response<dynamic>> Function() call) async {
     try {
-      final res = await call();
-      return res.data ?? <String, dynamic>{};
+      return (await call()).data;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

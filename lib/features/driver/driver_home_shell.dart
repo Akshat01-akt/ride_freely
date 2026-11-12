@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 
 import '../../core/core.dart';
 import '../../routes.dart';
+import '../auth/auth_scaffold.dart';
+import 'availability_controller.dart';
 
 class DriverHomeShell extends StatefulWidget {
   const DriverHomeShell({super.key});
@@ -59,8 +61,16 @@ class _DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<_DashboardTab> {
-  // Local only: going online is wired to the backend in the next phase.
-  bool _online = false;
+  final _availability = Get.find<AvailabilityController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // If the server still has this driver AVAILABLE (app was restarted), keep sharing the position.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _availability.resumeIfAvailable('${widget.auth.profile['availability_status']}'),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,42 +100,59 @@ class _DashboardTabState extends State<_DashboardTab> {
             ),
           ),
           const SizedBox(height: 20),
-          if (!approved) const FadeSlideIn(delay: Duration(milliseconds: 60), child: _VerificationBanner()),
+          if (!approved) FadeSlideIn(delay: const Duration(milliseconds: 60), child: _VerificationBanner(onUpload: () => Get.toNamed(Routes.documents))),
           FadeSlideIn(
             delay: const Duration(milliseconds: 120),
-            child: AnimatedContainer(
-              duration: AppMotion.page,
-              curve: AppMotion.curve,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: _online ? AppGradients.fuchsia : null,
-                color: _online ? null : AppColors.graphite,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                boxShadow: _online ? softShadow(color: AppColors.fuchsia, alpha: 0.35, blur: 28, y: 14) : softShadow(alpha: 0.3),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: AppMotion.tap,
-                          child: Text(_online ? 'You are online' : 'You are offline', key: ValueKey(_online), style: text.titleLarge),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          approved ? 'Go online to receive booking requests.' : 'Available once your documents are approved.',
-                          style: TextStyle(color: AppColors.cream.withValues(alpha: 0.8), height: 1.35),
-                        ),
-                      ],
+            child: Obx(() {
+              final online = _availability.online.value;
+              return AnimatedContainer(
+                duration: AppMotion.page,
+                curve: AppMotion.curve,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: online ? AppGradients.fuchsia : null,
+                  color: online ? null : AppColors.graphite,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  boxShadow: online ? softShadow(color: AppColors.fuchsia, alpha: 0.35, blur: 28, y: 14) : softShadow(alpha: 0.3),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: AppMotion.tap,
+                            child: Text(online ? 'You are online' : 'You are offline', key: ValueKey(online), style: text.titleLarge),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            online
+                                ? 'Customers nearby can see you. Keep the app open to stay visible.'
+                                : approved
+                                    ? 'Go online to receive booking requests.'
+                                    : 'Available once your documents are approved.',
+                            style: TextStyle(color: AppColors.cream.withValues(alpha: 0.8), height: 1.35),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Switch(value: _online, activeThumbColor: AppColors.cream, onChanged: approved ? (v) => setState(() => _online = v) : null),
-                ],
-              ),
-            ),
+                    if (_availability.busy.value)
+                      const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
+                    else
+                      Switch(value: online, activeThumbColor: AppColors.cream, onChanged: approved ? _availability.setOnline : null),
+                  ],
+                ),
+              );
+            }),
           ),
+          Obx(() => FormError(_availability.error.value)),
+          Obx(() {
+            final w = _availability.warning.value;
+            return w == null
+                ? const SizedBox.shrink()
+                : Padding(padding: const EdgeInsets.only(top: 8), child: Text(w, style: const TextStyle(color: AppColors.beige)));
+          }),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -143,25 +170,29 @@ class _DashboardTabState extends State<_DashboardTab> {
 }
 
 class _VerificationBanner extends StatelessWidget {
-  const _VerificationBanner();
+  const _VerificationBanner({required this.onUpload});
+
+  final VoidCallback onUpload;
 
   @override
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(AppRadius.md)),
-        child: const Row(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.hourglass_top_rounded, color: AppColors.fuchsia),
-            SizedBox(width: 12),
+            const Icon(Icons.hourglass_top_rounded, color: AppColors.fuchsia),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Verification pending', style: TextStyle(color: AppColors.black, fontWeight: FontWeight.w800)),
-                  SizedBox(height: 2),
-                  Text('Our team is reviewing your details. You can go online once you are approved.', style: TextStyle(color: AppColors.charcoal, height: 1.35)),
+                  const Text('Verification pending', style: TextStyle(color: AppColors.black, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  const Text('Upload your licence and ID proof. You can go online once our team approves them.', style: TextStyle(color: AppColors.charcoal, height: 1.35)),
+                  const SizedBox(height: 10),
+                  AppButton(label: 'Upload documents', compact: true, icon: Icons.upload_file_rounded, onPressed: onUpload),
                 ],
               ),
             ),
@@ -209,6 +240,8 @@ class _ProfileTab extends StatelessWidget {
       ),
     );
     if (ok != true) return;
+    // Tell the server we are offline while the session is still valid.
+    await Get.find<AvailabilityController>().setOnline(false);
     await auth.logout();
     Get.offAllNamed(Routes.login(UserRole.driver));
   }

@@ -9,6 +9,8 @@ abstract final class Routes {
   static String register(UserRole r) => '/${r.name}/register';
   static String home(UserRole r) => '/${r.name}/home';
 
+  static const documents = '/driver/documents';
+
   // Customer-only screens
   static const drivers = '/customer/drivers';
   static const driverDetails = '/customer/driver';

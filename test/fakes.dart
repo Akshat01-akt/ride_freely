@@ -3,6 +3,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_freely/core/core.dart';
 import 'package:ride_freely/features/customer/data/models.dart';
+import 'package:ride_freely/features/driver/availability_controller.dart';
+import 'package:ride_freely/features/driver/data/driver_api.dart';
+import 'package:ride_freely/features/driver/documents_controller.dart';
 import 'package:ride_freely/features/customer/data/sources.dart';
 
 /// Continuous animations never settle, so tests run with the OS reduce-motion setting on.
@@ -13,6 +16,64 @@ void reduceMotionFor(WidgetTester t, {Size size = const Size(390, 844)}) {
   t.view.physicalSize = size;
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
+}
+
+class FakeLocationService implements LocationService {
+  FakeLocationService({this.point = const GeoPoint(latitude: 26.4499, longitude: 80.3319), this.error});
+
+  GeoPoint point;
+  LocationException? error;
+  int calls = 0;
+
+  @override
+  Future<GeoPoint> current() async {
+    calls++;
+    if (error != null) throw error!;
+    return point;
+  }
+}
+
+class FakeDriverApi implements DriverApi {
+  final calls = <String>[];
+  ApiException? availabilityError;
+  ApiException? locationError;
+  ApiException? uploadError;
+  List<DriverDocument> docs = const [];
+
+  @override
+  Future<void> setAvailability(bool online) async {
+    calls.add('setAvailability:$online');
+    if (availabilityError != null) throw availabilityError!;
+  }
+
+  @override
+  Future<void> sendLocation(GeoPoint point) async {
+    calls.add('sendLocation');
+    if (locationError != null) throw locationError!;
+  }
+
+  @override
+  Future<List<DriverDocument>> documents() async => docs;
+
+  @override
+  Future<void> uploadDocument({required String type, required List<int> bytes, required String filename, required String contentType}) async {
+    calls.add('upload:$type:${bytes.length}');
+    if (uploadError != null) throw uploadError!;
+    docs = [...docs.where((d) => d.type != type), DriverDocument(type: type, status: DocumentStatus.pending)];
+  }
+}
+
+class FakePicker implements DocumentPicker {
+  FakePicker([this.file = const PickedDocument(bytes: [1, 2, 3], filename: 'photo.jpg', contentType: 'image/jpeg')]);
+
+  PickedDocument? file;
+  int calls = 0;
+
+  @override
+  Future<PickedDocument?> pick() async {
+    calls++;
+    return file;
+  }
 }
 
 class FakeDriversSource implements DriversSource {
@@ -91,15 +152,24 @@ class Fakes {
     FakeAuthRepository? customer,
     FakeAuthRepository? driver,
     this.onboardingDone = true,
+    FakeDriverApi? driverApi,
+    FakeLocationService? location,
+    FakePicker? picker,
     List<DriverSummary> drivers = const [],
     WalletSource? wallet,
-  })  : driversSource = FakeDriversSource(drivers),
+  })  : driverApi = driverApi ?? FakeDriverApi(),
+        location = location ?? FakeLocationService(),
+        picker = picker ?? FakePicker(),
+        driversSource = FakeDriversSource(drivers),
         walletSource = wallet ?? FakeWalletSource(),
         customer = customer ?? FakeAuthRepository(UserRole.customer),
         driver = driver ?? FakeAuthRepository(UserRole.driver),
         roleStore = MemoryRoleStore(storedRole);
 
   final bool onboardingDone;
+  final FakeDriverApi driverApi;
+  final FakeLocationService location;
+  final FakePicker picker;
   final FakeDriversSource driversSource;
   final WalletSource walletSource;
   final FakeAuthRepository customer;
@@ -108,8 +178,15 @@ class Fakes {
 
   void install() {
     Get.reset();
+    // Closing controllers cancels the location timer, which would otherwise outlive the test.
+    addTearDown(() => Get.deleteAll(force: true));
     Get.put<RoleStore>(roleStore);
     Get.put<OnboardingStore>(MemoryOnboardingStore(onboardingDone));
+    Get.put<DriverApi>(driverApi);
+    Get.put<LocationService>(location);
+    Get.put<DocumentPicker>(picker);
+    Get.put(AvailabilityController(driverApi, location, interval: const Duration(hours: 1)));
+    Get.put(DocumentsController(driverApi, picker));
     Get.put(DriversController(driversSource));
     Get.put(WalletController(walletSource));
     Get.put(AuthController(customer), tag: UserRole.customer.name);
