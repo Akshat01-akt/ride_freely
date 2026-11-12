@@ -41,6 +41,10 @@ curl -X POST localhost/api/v1/auth/admin/login -H 'content-type: application/jso
 
 Driver flow: register, upload documents, admin approves, driver goes online (location is shared every 10 s while the app is open), customers see the driver in nearby search (5 km by default). Booking flow: the customer sends a request, the driver accepts or declines in the Requests tab, then starts and completes the trip; the customer can cancel until it starts.
 
+### Admin website
+
+Open `http://localhost/admin/` (served by nginx, same address as the API) and log in with an admin account (create one with the CLI above). It has a dashboard, a drivers list with search and approval filter, a driver page where you view and approve or reject each document and approve, reject, suspend or deactivate the driver, and a users list where you activate or deactivate accounts. Deactivated accounts cannot log in. It is plain HTML, CSS and JavaScript in `docker/admin/` with no build step; edit and refresh.
+
 ## Backend tests
 
 Needs the compose `db` and `redis` services running (Redis is published on `127.0.0.1:6390`, the database on `127.0.0.1:5433`). Tests create and migrate a separate `ride_freely_test` database.
