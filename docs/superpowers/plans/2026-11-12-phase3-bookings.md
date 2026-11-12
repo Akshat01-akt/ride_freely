@@ -20,6 +20,8 @@
 - The other party's phone number is shown only while a booking is ACCEPTED or IN_PROGRESS.
 - Someone else's booking id returns 404, never 403.
 - Nearby search hides drivers who have an active booking overlapping now.
+- Review fixes (rulings): a driver must be approved and not suspended to accept or start; an admin cannot suspend or reject a driver who has an accepted or running booking that has not ended (unanswered requests do not block); a trip can be started only inside its window and never while another trip is running; the customer's row is locked while the 3-booking limit is checked.
+- Known gaps, not fixed: no push or polling (lists refresh when the tab opens or on pull-down); a booking a driver never completes stays active and counts toward the customer's limit of 3.
 - No Redis lock: the exclusion constraint is the single source of truth.
 
 ## Global Constraints

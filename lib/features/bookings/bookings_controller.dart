@@ -27,9 +27,12 @@ class BookingsController extends GetxController {
   static String _message(Object e) =>
       e is ApiException ? e.message : 'Something went wrong. Please try again.';
 
-  Future<void> load() async {
+  /// Loads the list. A plain load clears the old one first (it may belong to a previous account);
+  /// a refresh ([keepItems]) leaves it on screen while the new one arrives.
+  Future<void> load({bool keepItems = false}) async {
     loading.value = true;
     error.value = null;
+    if (!keepItems) items.clear();
     try {
       items.assignAll(await _api.list());
     } catch (e) {
@@ -82,8 +85,9 @@ class BookingsController extends GetxController {
     } catch (e) {
       actionError.value = _message(e);
       // The booking probably changed under us (expired, cancelled): show what it really is now.
-      actingId.value = null;
-      await load();
+      await load(
+        keepItems: true,
+      ); // actingId stays set until this finishes, so no second tap sneaks in
       return false;
     } finally {
       actingId.value = null;

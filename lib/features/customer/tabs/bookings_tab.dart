@@ -97,17 +97,21 @@ class _BookingsTabState extends State<BookingsTab> {
                       : null,
                 );
               }
-              return ListView(
-                children: [
-                  for (var i = 0; i < items.length; i++)
-                    FadeSlideIn(
-                      delay: Duration(milliseconds: 80 * i),
-                      child: BookingCard(
-                        booking: items[i],
-                        controller: bookings,
+              return RefreshIndicator(
+                onRefresh: () => bookings.load(keepItems: true),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      FadeSlideIn(
+                        delay: Duration(milliseconds: 80 * i),
+                        child: BookingCard(
+                          booking: items[i],
+                          controller: bookings,
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               );
             }),
           ),

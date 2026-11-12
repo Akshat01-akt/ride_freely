@@ -161,11 +161,15 @@ class FakeBookingsApi implements BookingsApi {
   Object? actError;
   Completer<void>? gate;
   int actCalls = 0;
+  int listCalls = 0;
+  Completer<void>? listGate;
   final created = <Map<String, Object?>>[];
   final actions = <String>[];
 
   @override
   Future<List<Booking>> list() async {
+    listCalls++;
+    await listGate?.future;
     if (error != null) throw error!;
     return items;
   }

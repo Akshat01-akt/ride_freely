@@ -64,9 +64,20 @@ class _Header extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
             const SizedBox(height: 4),
-            StatusPill(label: state.label, color: _pillColor(state), pulsing: state == BookingState.requested || state == BookingState.inProgress),
+            StatusPill(
+              label: state.label,
+              color: _pillColor(state),
+              pulsing:
+                  state == BookingState.requested ||
+                  state == BookingState.inProgress,
+            ),
           ],
         ),
       ),

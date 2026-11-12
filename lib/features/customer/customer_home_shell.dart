@@ -70,7 +70,12 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> {
       ),
       bottomNavigationBar: AppBottomNav(
         index: _index,
-        onChanged: (i) => setState(() => _index = i),
+        onChanged: (i) {
+          setState(() => _index = i);
+          if (i == 1) {
+            bookingsFor(UserRole.customer).load(keepItems: true);
+          }
+        },
         items: const [
           NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
           NavItem(

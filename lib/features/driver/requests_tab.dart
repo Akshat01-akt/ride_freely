@@ -46,29 +46,33 @@ class RequestsTab extends StatelessWidget {
         );
       }
       final active = bookings.upcoming, history = bookings.past;
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        children: [
-          FadeSlideIn(child: Text('Requests', style: text.headlineSmall)),
-          Obx(() => FormError(bookings.actionError.value)),
-          if (active.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text('Active', style: text.titleMedium),
-            const SizedBox(height: 10),
-            for (var i = 0; i < active.length; i++)
-              FadeSlideIn(
-                delay: Duration(milliseconds: 60 * i),
-                child: RequestCard(booking: active[i], controller: bookings),
-              ),
+      return RefreshIndicator(
+        onRefresh: () => bookings.load(keepItems: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          children: [
+            FadeSlideIn(child: Text('Requests', style: text.headlineSmall)),
+            Obx(() => FormError(bookings.actionError.value)),
+            if (active.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text('Active', style: text.titleMedium),
+              const SizedBox(height: 10),
+              for (var i = 0; i < active.length; i++)
+                FadeSlideIn(
+                  delay: Duration(milliseconds: 60 * i),
+                  child: RequestCard(booking: active[i], controller: bookings),
+                ),
+            ],
+            if (history.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text('History', style: text.titleMedium),
+              const SizedBox(height: 10),
+              for (final b in history)
+                RequestCard(booking: b, controller: bookings),
+            ],
           ],
-          if (history.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text('History', style: text.titleMedium),
-            const SizedBox(height: 10),
-            for (final b in history)
-              RequestCard(booking: b, controller: bookings),
-          ],
-        ],
+        ),
       );
     });
   }

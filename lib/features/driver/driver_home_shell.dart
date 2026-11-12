@@ -51,7 +51,12 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
       ),
       bottomNavigationBar: AppBottomNav(
         index: _index,
-        onChanged: (i) => setState(() => _index = i),
+        onChanged: (i) {
+          setState(() => _index = i);
+          if (i == 1) {
+            bookingsFor(UserRole.driver).load(keepItems: true);
+          }
+        },
         items: const [
           NavItem(
             Icons.dashboard_outlined,

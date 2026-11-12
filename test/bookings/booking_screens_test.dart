@@ -337,4 +337,43 @@ void main() {
       expect(find.textContaining('cannot be changed'), findsOneWidget);
     });
   });
+
+  group('lists stay fresh', () {
+    testWidgets('opening the customer Bookings tab reloads it', (t) async {
+      final api = await _customer(t, bookings: [FakeBookingsApi.booking()]);
+      final before = api.listCalls;
+      await t.tap(find.text('Bookings'));
+      await t.pumpAndSettle();
+      expect(api.listCalls, before + 1);
+    });
+
+    testWidgets('pulling down on the customer list reloads it', (t) async {
+      final api = await _customer(t, bookings: [FakeBookingsApi.booking()]);
+      await t.tap(find.text('Bookings'));
+      await t.pumpAndSettle();
+      final before = api.listCalls;
+      await t.fling(find.byType(ListView).first, const Offset(0, 300), 1000);
+      await t.pumpAndSettle();
+      expect(api.listCalls, before + 1);
+    });
+
+    testWidgets('opening the driver Requests tab reloads it, so new requests show up', (t) async {
+      final api = await _driver(t);
+      expect(find.text('No requests yet'), findsNothing); // dashboard is showing
+      api.items = [FakeBookingsApi.booking()];
+      await t.tap(find.text('Requests'));
+      await t.pumpAndSettle();
+      expect(find.text('Asha Rao'), findsOneWidget);
+    });
+
+    testWidgets('pulling down on the driver list reloads it', (t) async {
+      final api = await _driver(t, bookings: [FakeBookingsApi.booking()]);
+      await t.tap(find.text('Requests'));
+      await t.pumpAndSettle();
+      final before = api.listCalls;
+      await t.fling(find.byType(ListView).first, const Offset(0, 300), 1000);
+      await t.pumpAndSettle();
+      expect(api.listCalls, before + 1);
+    });
+  });
 }

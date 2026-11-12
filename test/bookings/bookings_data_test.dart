@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ride_freely/core/core.dart';
@@ -268,6 +270,45 @@ void main() {
       expect(await c.act('a', BookingAction.accept), isFalse);
       await first;
       expect(api.actCalls, 1);
+    });
+
+    test('a fresh load hides the previous account\'s bookings until the new ones arrive', () async {
+      final api = FakeBookingsApi([FakeBookingsApi.booking(id: 'old')]);
+      final c = BookingsController(api);
+      await c.load();
+      api.listGate = Completer<void>();
+      api.items = [FakeBookingsApi.booking(id: 'new')];
+      final loading = c.load();
+      expect(c.items, isEmpty);
+      api.listGate!.complete();
+      await loading;
+      expect(c.items.single.id, 'new');
+    });
+
+    test('a refresh keeps the list on screen while it reloads', () async {
+      final api = FakeBookingsApi([FakeBookingsApi.booking(id: 'a')]);
+      final c = BookingsController(api);
+      await c.load();
+      api.listGate = Completer<void>();
+      final refreshing = c.load(keepItems: true);
+      expect(c.items.single.id, 'a');
+      api.listGate!.complete();
+      await refreshing;
+    });
+
+    test('no second action can start while the reload after a refused action is running', () async {
+      final api = FakeBookingsApi([FakeBookingsApi.booking(id: 'a')]);
+      final c = BookingsController(api);
+      await c.load();
+      api.actError = const ApiException('nope', statusCode: 409);
+      api.listGate = Completer<void>();
+      final first = c.act('a', BookingAction.accept);
+      await Future<void>.delayed(Duration.zero);
+      expect(c.actingId.value, 'a');
+      expect(await c.act('a', BookingAction.accept), isFalse);
+      api.listGate!.complete();
+      await first;
+      expect(c.actingId.value, isNull);
     });
   });
 }
