@@ -1,5 +1,7 @@
 # Ride Freely Phase 1: Backend Foundation and Flutter Skeletons Implementation Plan
 
+> **Amended during execution (2026-11-12):** the product owner asked for ONE Flutter app with two interfaces instead of two apps. Tasks 5-7 were implemented as a single app at the repo root (`lib/core` replaces `packages/ride_core`; `lib/features/customer` and `lib/features/driver` replace the two apps; a role-choice screen was added). Brand palette: fuchsia #D8125B, #2C2E39, cream #FFFDF2, black, beige #DDD0C8, #323232. Backend tasks 1-4 are unchanged.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A running Dockerised FastAPI backend with separate customer and driver registration/login (JWT, role-enforced), plus two Flutter app skeletons (Customer, Driver) with their own login, register and home-shell screens wired to it.

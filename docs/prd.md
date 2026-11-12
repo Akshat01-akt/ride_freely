@@ -38,7 +38,7 @@ Drivers in the same cities lack a steady, fairly priced source of short engageme
 | Driver | Professional driver | Steady bookings, clear earnings, simple app |
 | Admin | Platform operator | Verify drivers, resolve disputes, monitor bookings and payments |
 
-Customers and drivers use **separate apps with separate logins**. The backend enforces role separation: a customer credential cannot act as a driver and vice versa.
+Customers and drivers use **one app with two separate interfaces and separate logins**; the user picks their role on first launch. The backend enforces role separation: a customer credential cannot act as a driver and vice versa.
 
 ## 6. Key user journeys
 

@@ -4,12 +4,12 @@ Status: Draft v1 (2026-11-12). Companion to `prd.md`.
 
 ## 1. Overview
 
-Two Flutter apps (Customer, Driver) talk to one FastAPI backend over REST and WebSockets. PostgreSQL with PostGIS holds permanent data and answers geographic queries. Redis holds short-lived state: live locations, reservation locks, request timeouts and job queues. Nginx fronts everything.
+One Flutter app with two interfaces (Customer and Driver) talks to one FastAPI backend over REST and WebSockets. PostgreSQL with PostGIS holds permanent data and answers geographic queries. Redis holds short-lived state: live locations, reservation locks, request timeouts and job queues. Nginx fronts everything.
 
 ```
- Customer app      Driver app        (Admin dashboard, later)
-      \               |                 /
-       +--------- HTTPS / WSS ---------+
+ Flutter app (customer + driver interfaces)   (Admin dashboard, later)
+                  |                                  |
+                  +-------- HTTPS / WSS -------------+
                       |
                     Nginx  (TLS, rate limit, WS upgrade)
                       |
@@ -25,9 +25,10 @@ Two Flutter apps (Customer, Driver) talk to one FastAPI backend over REST and We
 ```
 ride_freely/
   backend/            FastAPI service, Alembic migrations, tests
-  apps/customer_app/  Flutter customer app
-  apps/driver_app/    Flutter driver app
-  packages/ride_core/ Shared Flutter code: API client, auth, theme, widgets
+  lib/                Flutter app (one app, two interfaces)
+    core/             API client, auth, role store, theme, shared widgets
+    features/         customer/, driver/, auth/, role_select/
+  android/ ios/ test/ Flutter platform folders and tests
   docker/             Nginx config
   docker-compose.yml
   docs/               prd.md, architecture.md, plans
@@ -169,14 +170,13 @@ Server calculates price; the client never sends an amount. Flow: create booking,
 
 ## 12. Flutter architecture
 
-Each app is feature-first: `features/{auth,home,booking,...}` with controllers (GetX), pages and bindings. Shared infrastructure lives in `packages/ride_core`:
+A single app serves both roles. On first launch the user picks "I need a driver" or "I'm a driver"; the choice is stored (`RoleStore`) and the app then shows that interface's own login, registration and home screens. "Switch account type" on the login screen clears it.
 
-- `ApiClient` (Dio): attaches the bearer token, performs one refresh on 401, clears tokens if refresh fails.
-- `TokenStorage`: `flutter_secure_storage`.
-- `AuthRepository` and `AuthController`, parameterised by `UserRole`.
-- `AppTheme` and shared form widgets; each app supplies its own seed colour.
-
-Controllers handle presentation and API calls only; all matching and availability rules live in the backend.
+- Each interface has its own session: a separate `ApiClient` and token storage namespace per role, and an `AuthController` registered in GetX under the role's name (`authFor(role)`). A customer login and a driver login never share tokens.
+- Each interface has its own look from the shared palette: customer is cream-led (light theme), driver is dark-grey-led (dark theme), applied per route by `RoleTheme`.
+- `lib/core`: `ApiClient` (Dio; attaches the bearer token, one refresh on 401, clears tokens if refresh fails), `TokenStorage` (`flutter_secure_storage`), `AuthRepository` and `AuthController` parameterised by `UserRole`, `AppTheme`, shared widgets.
+- `lib/features/<role>`: pages and controllers per interface. Controllers handle presentation and API calls only; all matching and availability rules live in the backend.
+- The backend, not the app, enforces role separation: a customer token cannot call driver endpoints.
 
 ## 13. Deployment
 
@@ -194,7 +194,7 @@ Argon2id hashing, short-lived access tokens, role checks on every route and WebS
 
 ## 16. Decisions recorded
 
-- One backend, two apps, shared `ride_core` package.
+- One backend, one Flutter app with two role-based interfaces (decided by the product owner; earlier drafts had two apps).
 - PostGIS for spatial queries; Redis only for ephemeral state.
 - OpenStreetMap for development; Google Maps/Routes considered once ETA accuracy matters.
 - GetX chosen for familiarity; revisit if the apps grow complex.

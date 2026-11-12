@@ -5,9 +5,9 @@ On-demand driver rental: car owners book a verified driver, by the hour or for a
 | Path | What |
 |------|------|
 | `backend/` | FastAPI + PostgreSQL/PostGIS + Redis |
-| `apps/customer_app/` | Flutter customer app |
-| `apps/driver_app/` | Flutter driver app |
-| `packages/ride_core/` | Shared Flutter code (API client, auth, theme) |
+| `lib/` | The Flutter app: one app, two interfaces (customer and driver) |
+| `lib/core/` | API client, auth, role store, theme, shared widgets |
+| `lib/features/customer/`, `lib/features/driver/` | The two interfaces |
 | `docs/` | [PRD](docs/prd.md), [architecture](docs/architecture.md), plans |
 
 ## Run the backend
@@ -35,7 +35,6 @@ cd backend && .venv/bin/python -m pytest
 ## Run the apps
 
 ```bash
-cd apps/customer_app   # or apps/driver_app
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2/api/v1     # Android emulator (default)
 flutter run --dart-define=API_BASE_URL=http://localhost/api/v1    # iOS simulator
 flutter run --dart-define=API_BASE_URL=http://<your-lan-ip>/api/v1  # physical phone on the same Wi-Fi
@@ -43,14 +42,15 @@ flutter run --dart-define=API_BASE_URL=http://<your-lan-ip>/api/v1  # physical p
 
 Android blocks plain-HTTP traffic on release builds; use HTTPS for anything beyond local development.
 
+On first launch the app asks "I need a driver" or "I'm a driver", remembers the choice, and shows that interface's own login, registration and home screens. Use "Switch account type" on the login screen to change it.
+
 ## Flutter tests
 
 ```bash
-(cd packages/ride_core && flutter test)
-(cd apps/customer_app && flutter test)
-(cd apps/driver_app && flutter test)
+flutter test
+flutter analyze
 ```
 
 ## Brand palette
 
-Fuchsia `#D8125B`, dark grey `#2C2E39`, cream `#FFFDF2`, black `#000000`, beige `#DDD0C8`, dark grey `#323232` (see `packages/ride_core/lib/src/theme/`).
+Fuchsia `#D8125B`, dark grey `#2C2E39`, cream `#FFFDF2`, black `#000000`, beige `#DDD0C8`, dark grey `#323232` (see `lib/core/theme/`).
