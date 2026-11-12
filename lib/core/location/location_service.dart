@@ -31,9 +31,21 @@ class LocationException implements Exception {
 /// Where the phone is right now. Behind an interface so screens can be tested without a GPS.
 abstract class LocationService {
   Future<GeoPoint> current();
+
+  /// Opens the phone's settings so the user can allow location (or turn it on).
+  Future<void> openSettings();
 }
 
 class GeolocatorLocationService implements LocationService {
+  @override
+  Future<void> openSettings() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      await Geolocator.openLocationSettings();
+    } else {
+      await Geolocator.openAppSettings();
+    }
+  }
+
   @override
   Future<GeoPoint> current() async {
     if (!await Geolocator.isLocationServiceEnabled()) throw const LocationException(LocationProblem.servicesOff);

@@ -24,6 +24,10 @@ class FakeLocationService implements LocationService {
   GeoPoint point;
   LocationException? error;
   int calls = 0;
+  int settingsOpened = 0;
+
+  @override
+  Future<void> openSettings() async => settingsOpened++;
 
   @override
   Future<GeoPoint> current() async {
@@ -78,10 +82,16 @@ class FakePicker implements DocumentPicker {
 
 class FakeDriversSource implements DriversSource {
   FakeDriversSource(this.drivers);
-  final List<DriverSummary> drivers;
+  List<DriverSummary> drivers;
+  Object? error;
+  int calls = 0;
 
   @override
-  Future<List<DriverSummary>> nearby() async => drivers;
+  Future<List<DriverSummary>> nearby() async {
+    calls++;
+    if (error != null) throw error!;
+    return drivers;
+  }
 }
 
 class FakeWalletSource implements WalletSource {
@@ -156,11 +166,12 @@ class Fakes {
     FakeLocationService? location,
     FakePicker? picker,
     List<DriverSummary> drivers = const [],
+    Object? driversError,
     WalletSource? wallet,
   })  : driverApi = driverApi ?? FakeDriverApi(),
         location = location ?? FakeLocationService(),
         picker = picker ?? FakePicker(),
-        driversSource = FakeDriversSource(drivers),
+        driversSource = FakeDriversSource(drivers)..error = driversError,
         walletSource = wallet ?? FakeWalletSource(),
         customer = customer ?? FakeAuthRepository(UserRole.customer),
         driver = driver ?? FakeAuthRepository(UserRole.driver),

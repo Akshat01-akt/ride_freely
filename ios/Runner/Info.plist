@@ -66,5 +66,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>DriveRent uses your location to show drivers near you, and to share your position with customers while you are online as a driver.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>DriveRent needs access to your photos so you can upload your driving licence and ID.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

@@ -72,7 +72,8 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> getJson(String path) async => _asMap(await _send(() => dio.get<dynamic>(path)));
+  Future<Map<String, dynamic>> getJson(String path, {Map<String, dynamic>? query}) async =>
+      _asMap(await _send(() => dio.get<dynamic>(path, queryParameters: query)));
 
   Future<List<dynamic>> getList(String path) async {
     final data = await _send(() => dio.get<dynamic>(path));

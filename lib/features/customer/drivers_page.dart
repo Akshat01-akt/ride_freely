@@ -6,6 +6,7 @@ import '../../routes.dart';
 import 'data/models.dart';
 import 'data/sources.dart';
 import 'widgets/driver_card.dart';
+import 'widgets/drivers_error.dart';
 
 enum _Filter { all, verified, topRated, lowestPrice }
 
@@ -120,6 +121,7 @@ class _DriversPageState extends State<DriversPage> {
                     if (_drivers.loading.value) {
                       return ListView(padding: const EdgeInsets.symmetric(horizontal: 20), children: [for (var i = 0; i < 4; i++) const Padding(padding: EdgeInsets.only(bottom: 12), child: ShimmerBox(height: 92, radius: 24))]);
                     }
+                    if (_drivers.error.value != null) return DriversError(controller: _drivers);
                     final list = _visible;
                     if (list.isEmpty) {
                       final searching = _query.text.isNotEmpty || _filter != _Filter.all;

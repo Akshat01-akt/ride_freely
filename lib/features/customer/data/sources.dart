@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../../core/core.dart';
 import 'models.dart';
 
 /// Where the customer app gets drivers from. The backend endpoint does not exist yet,
@@ -9,8 +10,23 @@ abstract class DriversSource {
 }
 
 class BackendDriversSource implements DriversSource {
+  BackendDriversSource(this._client, this._location, {this.radiusMeters = 5000});
+
+  final ApiClient _client;
+  final LocationService _location;
+  final double radiusMeters;
+
   @override
-  Future<List<DriverSummary>> nearby() async => const [];
+  Future<List<DriverSummary>> nearby() async {
+    final here = await _location.current();
+    final json = await _client.getJson('/drivers/nearby', query: {
+      'latitude': here.latitude,
+      'longitude': here.longitude,
+      'radius': radiusMeters,
+    });
+    final list = (json['drivers'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    return list.map(DriverSummary.fromJson).toList();
+  }
 }
 
 abstract class WalletSource {
@@ -64,12 +80,28 @@ class DriversController extends GetxController {
   final drivers = <DriverSummary>[].obs;
   final loading = false.obs;
 
+  /// Why the list could not be loaded, in words the user can act on.
+  final error = RxnString();
+
+  /// Set when the cause is the phone's location (permission or services), so the screen can offer settings.
+  final problem = Rxn<LocationProblem>();
+
   Future<void> load() async {
     loading.value = true;
+    error.value = null;
+    problem.value = null;
     try {
       drivers.assignAll(await _source.nearby());
+    } on LocationException catch (e) {
+      drivers.clear();
+      problem.value = e.problem;
+      error.value = e.message;
+    } on ApiException catch (e) {
+      drivers.clear();
+      error.value = e.message;
     } catch (_) {
       drivers.clear();
+      error.value = 'Something went wrong. Please try again.';
     } finally {
       loading.value = false;
     }

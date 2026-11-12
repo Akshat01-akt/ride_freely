@@ -5,6 +5,7 @@ import '../../../core/core.dart';
 import '../../../routes.dart';
 import '../data/sources.dart';
 import '../widgets/driver_card.dart';
+import '../widgets/drivers_error.dart';
 import '../widgets/service_card.dart';
 
 class HomeTab extends StatelessWidget {
@@ -110,6 +111,7 @@ class HomeTab extends StatelessWidget {
           if (drivers.loading.value) {
             return Column(children: [for (var i = 0; i < 2; i++) const Padding(padding: EdgeInsets.only(bottom: 12), child: ShimmerBox(height: 90, radius: 24))]);
           }
+          if (drivers.error.value != null) return DriversError(controller: drivers);
           if (drivers.drivers.isEmpty) {
             return const EmptyState(
               icon: Icons.person_search_rounded,

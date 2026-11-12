@@ -13,7 +13,6 @@ const _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10
 void main() {
   Get.put<RoleStore>(SecureRoleStore(), permanent: true);
   Get.put<OnboardingStore>(SecureOnboardingStore(), permanent: true);
-  Get.put(DriversController(kUiPreview ? PreviewDriversSource() : BackendDriversSource()), permanent: true);
   Get.put(WalletController(kUiPreview ? PreviewWalletSource() : BackendWalletSource()), permanent: true);
   final repositories = <UserRole, AuthRepository>{};
   for (final role in UserRole.values) {
@@ -27,6 +26,10 @@ void main() {
   Get.put<LocationService>(GeolocatorLocationService(), permanent: true);
   Get.put<DriverApi>(api, permanent: true);
   Get.put<DocumentPicker>(ImagePickerDocumentPicker(), permanent: true);
+  Get.put(
+    DriversController(kUiPreview ? PreviewDriversSource() : BackendDriversSource(repositories[UserRole.customer]!.client, Get.find<LocationService>())),
+    permanent: true,
+  );
   Get.put(AvailabilityController(api, Get.find<LocationService>()), permanent: true);
   Get.put(DocumentsController(api, Get.find<DocumentPicker>()), permanent: true);
   runApp(const RideFreelyApp());

@@ -8,7 +8,40 @@ import 'package:get/get.dart';
 import 'app.dart';
 import 'core/core.dart';
 import 'features/customer/data/sources.dart';
+import 'features/driver/availability_controller.dart';
+import 'features/driver/data/driver_api.dart';
+import 'features/driver/documents_controller.dart';
 import 'routes.dart';
+
+class _PreviewLocation implements LocationService {
+  @override
+  Future<GeoPoint> current() async => const GeoPoint(latitude: 26.4499, longitude: 80.3319);
+
+  @override
+  Future<void> openSettings() async {}
+}
+
+class _PreviewDriverApi implements DriverApi {
+  @override
+  Future<void> setAvailability(bool online) async {}
+
+  @override
+  Future<void> sendLocation(GeoPoint point) async {}
+
+  @override
+  Future<List<DriverDocument>> documents() async => const [
+        DriverDocument(type: 'LICENCE', status: DocumentStatus.pending),
+        DriverDocument(type: 'ID_PROOF', status: DocumentStatus.rejected, note: 'Photo is blurry. Please upload a clearer one.'),
+      ];
+
+  @override
+  Future<void> uploadDocument({required String type, required List<int> bytes, required String filename, required String contentType}) async {}
+}
+
+class _PreviewPicker implements DocumentPicker {
+  @override
+  Future<PickedDocument?> pick() async => null;
+}
 
 void main() {
   Get.put<RoleStore>(MemoryRoleStore(), permanent: true);
@@ -29,6 +62,12 @@ void main() {
     'verification_status': 'PENDING',
     'rating': '0.00',
   });
+  final api = _PreviewDriverApi();
+  Get.put<LocationService>(_PreviewLocation(), permanent: true);
+  Get.put<DriverApi>(api, permanent: true);
+  Get.put<DocumentPicker>(_PreviewPicker(), permanent: true);
+  Get.put(AvailabilityController(api, Get.find<LocationService>()), permanent: true);
+  Get.put(DocumentsController(api, Get.find<DocumentPicker>()), permanent: true);
   runApp(const RideFreelyApp());
 
   final driver = PreviewData.drivers.first;
@@ -50,6 +89,7 @@ void main() {
     ('wallet', Routes.home(UserRole.customer), 2),
     ('profile', Routes.home(UserRole.customer), 3),
     ('driver_home', Routes.home(UserRole.driver), null),
+    ('driver_documents', Routes.documents, null),
   ];
   var i = 0;
   // Splash decides its own route after ~1.7s, so start stepping after that.

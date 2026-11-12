@@ -43,7 +43,7 @@ class DriverDetailsPage extends StatelessWidget {
                       const SizedBox(height: 14),
                       Text(d.name, style: const TextStyle(color: AppColors.cream, fontSize: 24, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
-                      RatingBadge(rating: d.rating, rides: d.rides, light: true),
+                      RatingBadge(rating: d.rating, rides: d.rides > 0 ? d.rides : null, light: true),
                     ],
                   ),
                 ),

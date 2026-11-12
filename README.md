@@ -24,9 +24,26 @@ curl localhost/api/v1/health
 
 API docs: http://localhost/docs
 
+## Admin: approving drivers
+
+There is no admin screen yet; admins use the API. Create an admin once, then log in and review:
+
+```bash
+docker compose exec api python -m app.cli create-admin --phone +919000000001 --name "Ops"   # prompts for a password
+curl -X POST localhost/api/v1/auth/admin/login -H 'content-type: application/json' -d '{"phone":"+919000000001","password":"..."}'
+# with the returned access_token as `Authorization: Bearer ...`:
+#   GET   /api/v1/admin/drivers/pending
+#   GET   /api/v1/admin/documents/{id}/file
+#   PATCH /api/v1/admin/documents/{id}            {"status": "APPROVED", "note": "..."}
+#   PATCH /api/v1/admin/drivers/{driver_id}/verification  {"status": "APPROVED"}   # needs approved LICENCE + ID_PROOF
+#   PATCH /api/v1/admin/drivers/{driver_id}/suspension    {"suspended": true}
+```
+
+Driver flow: register, upload documents, admin approves, driver goes online (location is shared every 10 s while the app is open), customers see the driver in nearby search (5 km by default).
+
 ## Backend tests
 
-Needs the compose `db` service running. Tests create and migrate a separate `ride_freely_test` database.
+Needs the compose `db` and `redis` services running (Redis is published on `127.0.0.1:6390`, the database on `127.0.0.1:5433`). Tests create and migrate a separate `ride_freely_test` database.
 
 ```bash
 cd backend && .venv/bin/python -m pytest
