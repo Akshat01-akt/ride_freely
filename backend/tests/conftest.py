@@ -66,7 +66,7 @@ async def db_session():
         yield session
     async with engine.begin() as conn:
         await conn.exec_driver_sql(
-            "TRUNCATE driver_locations, driver_documents, driver_profiles, customer_profiles, users RESTART IDENTITY CASCADE"
+            "TRUNCATE bookings, driver_locations, driver_documents, driver_profiles, customer_profiles, users RESTART IDENTITY CASCADE"
         )
 
 
