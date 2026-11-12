@@ -38,8 +38,9 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
-    if (await _auth.login(_phone.text.trim(), _password.text))
+    if (await _auth.login(_phone.text.trim(), _password.text)) {
       Get.offAllNamed(Routes.home(widget.role));
+    }
   }
 
   @override
