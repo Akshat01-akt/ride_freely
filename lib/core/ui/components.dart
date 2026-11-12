@@ -4,43 +4,63 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import 'pressable.dart';
+import 'surfaces.dart';
 import 'tokens.dart';
 
 /// Circle with the person's initials. Used wherever there is no uploaded photo yet.
 class InitialsAvatar extends StatelessWidget {
-  const InitialsAvatar({super.key, required this.name, this.size = 52, this.ring = false});
+  const InitialsAvatar({
+    super.key,
+    required this.name,
+    this.size = 52,
+    this.ring = false,
+  });
 
   final String name;
   final double size;
   final bool ring;
 
   String get _initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
-    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
+    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : ''))
+        .toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: AppGradients.fuchsia,
-          border: ring ? Border.all(color: AppColors.cream, width: 3) : null,
-          boxShadow: ring ? softShadow(alpha: 0.18) : null,
-        ),
-        child: Text(
-          _initials,
-          style: TextStyle(color: AppColors.cream, fontWeight: FontWeight.w800, fontSize: size * 0.36),
-        ),
-      );
+    width: size,
+    height: size,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: AppGradients.fuchsia,
+      border: ring ? Border.all(color: AppColors.cream, width: 3) : null,
+      boxShadow: ring ? softShadow(alpha: 0.18) : null,
+    ),
+    child: Text(
+      _initials,
+      style: TextStyle(
+        color: AppColors.cream,
+        fontWeight: FontWeight.w800,
+        fontSize: size * 0.36,
+      ),
+    ),
+  );
 }
 
 /// Star plus rating that counts up when first shown.
 class RatingBadge extends StatelessWidget {
-  const RatingBadge({super.key, required this.rating, this.rides, this.light = false});
+  const RatingBadge({
+    super.key,
+    required this.rating,
+    this.rides,
+    this.light = false,
+  });
 
   final double rating;
   final int? rides;
@@ -58,9 +78,20 @@ class RatingBadge extends StatelessWidget {
           tween: Tween(begin: reduceMotion(context) ? rating : 0, end: rating),
           duration: AppMotion.success,
           curve: AppMotion.curve,
-          builder: (_, v, _) => Text(v.toStringAsFixed(1), style: TextStyle(fontWeight: FontWeight.w700, color: fg)),
+          builder: (_, v, _) => Text(
+            v.toStringAsFixed(1),
+            style: TextStyle(fontWeight: FontWeight.w700, color: fg),
+          ),
         ),
-        if (rides != null) Flexible(child: Text('  ($rides rides)', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: fg.withValues(alpha: 0.65), fontSize: 12))),
+        if (rides != null)
+          Flexible(
+            child: Text(
+              '  ($rides rides)',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: fg.withValues(alpha: 0.65), fontSize: 12),
+            ),
+          ),
       ],
     );
   }
@@ -68,7 +99,12 @@ class RatingBadge extends StatelessWidget {
 
 /// Small status label; the dot pulses when [pulsing] and motion is allowed.
 class StatusPill extends StatefulWidget {
-  const StatusPill({super.key, required this.label, required this.color, this.pulsing = false});
+  const StatusPill({
+    super.key,
+    required this.label,
+    required this.color,
+    this.pulsing = false,
+  });
 
   final String label;
   final Color color;
@@ -78,8 +114,12 @@ class StatusPill extends StatefulWidget {
   State<StatusPill> createState() => _StatusPillState();
 }
 
-class _StatusPillState extends State<StatusPill> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+class _StatusPillState extends State<StatusPill>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
 
   @override
   void didChangeDependencies() {
@@ -99,34 +139,57 @@ class _StatusPillState extends State<StatusPill> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(color: widget.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _c,
-              builder: (_, _) => Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.color,
-                  boxShadow: widget.pulsing
-                      ? [BoxShadow(color: widget.color.withValues(alpha: 0.5 * (1 - _c.value)), blurRadius: 2 + 8 * _c.value, spreadRadius: 4 * _c.value)]
-                      : null,
-                ),
-              ),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: widget.color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: _c,
+          builder: (_, _) => Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.color,
+              boxShadow: widget.pulsing
+                  ? [
+                      BoxShadow(
+                        color: widget.color.withValues(
+                          alpha: 0.5 * (1 - _c.value),
+                        ),
+                        blurRadius: 2 + 8 * _c.value,
+                        spreadRadius: 4 * _c.value,
+                      ),
+                    ]
+                  : null,
             ),
-            const SizedBox(width: 6),
-            Text(widget.label, style: TextStyle(color: widget.color, fontWeight: FontWeight.w700, fontSize: 12)),
-          ],
+          ),
         ),
-      );
+        const SizedBox(width: 6),
+        Text(
+          widget.label,
+          style: TextStyle(
+            color: widget.color,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({super.key, required this.title, this.actionLabel, this.onAction});
+  const SectionHeader({
+    super.key,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String title;
   final String? actionLabel;
@@ -134,23 +197,42 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
-          if (actionLabel != null)
-            Pressable(
-              onTap: onAction,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text(actionLabel!, style: const TextStyle(color: AppColors.fuchsia, fontWeight: FontWeight.w700)),
+    children: [
+      Expanded(
+        child: Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+      ),
+      if (actionLabel != null)
+        Pressable(
+          onTap: onAction,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              actionLabel!,
+              style: const TextStyle(
+                color: AppColors.fuchsia,
+                fontWeight: FontWeight.w700,
               ),
             ),
-        ],
-      );
+          ),
+        ),
+    ],
+  );
 }
 
 /// Friendly empty state; the icon bobs gently when motion is allowed.
 class EmptyState extends StatefulWidget {
-  const EmptyState({super.key, required this.icon, required this.title, required this.body, this.action});
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.action,
+  });
 
   final IconData icon;
   final String title;
@@ -161,8 +243,12 @@ class EmptyState extends StatefulWidget {
   State<EmptyState> createState() => _EmptyStateState();
 }
 
-class _EmptyStateState extends State<EmptyState> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 3));
+class _EmptyStateState extends State<EmptyState>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 3),
+  );
 
   @override
   void didChangeDependencies() {
@@ -198,15 +284,34 @@ class _EmptyStateState extends State<EmptyState> with SingleTickerProviderStateM
               child: Container(
                 width: 84,
                 height: 84,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.fuchsia.withValues(alpha: 0.10)),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.fuchsia.withValues(alpha: 0.10),
+                ),
                 child: Icon(widget.icon, size: 40, color: AppColors.fuchsia),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(widget.title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text(
+              widget.title,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 6),
-            Text(widget.body, textAlign: TextAlign.center, style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.7), height: 1.4)),
-            if (widget.action != null) ...[const SizedBox(height: AppSpacing.md), widget.action!],
+            Text(
+              widget.body,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+                height: 1.4,
+              ),
+            ),
+            if (widget.action != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              widget.action!,
+            ],
           ],
         ),
       ),
@@ -226,8 +331,12 @@ class ShimmerBox extends StatefulWidget {
   State<ShimmerBox> createState() => _ShimmerBoxState();
 }
 
-class _ShimmerBoxState extends State<ShimmerBox> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+class _ShimmerBoxState extends State<ShimmerBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
 
   @override
   void didChangeDependencies() {
@@ -247,25 +356,33 @@ class _ShimmerBoxState extends State<ShimmerBox> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _c,
-        builder: (_, _) => Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.radius),
-            gradient: LinearGradient(
-              begin: Alignment(-1.5 + 3 * _c.value, 0),
-              end: Alignment(-0.5 + 3 * _c.value, 0),
-              colors: [AppColors.beige.withValues(alpha: 0.55), AppColors.beige.withValues(alpha: 0.9), AppColors.beige.withValues(alpha: 0.55)],
-            ),
-          ),
+    animation: _c,
+    builder: (_, _) => Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.radius),
+        gradient: LinearGradient(
+          begin: Alignment(-1.5 + 3 * _c.value, 0),
+          end: Alignment(-0.5 + 3 * _c.value, 0),
+          colors: [
+            AppColors.beige.withValues(alpha: 0.55),
+            AppColors.beige.withValues(alpha: 0.9),
+            AppColors.beige.withValues(alpha: 0.55),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// Banner with a slowly shifting fuchsia gradient and floating circles.
 class GradientBanner extends StatefulWidget {
-  const GradientBanner({super.key, required this.child, this.padding = const EdgeInsets.all(22)});
+  const GradientBanner({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(22),
+  });
 
   final Widget child;
   final EdgeInsets padding;
@@ -274,8 +391,12 @@ class GradientBanner extends StatefulWidget {
   State<GradientBanner> createState() => _GradientBannerState();
 }
 
-class _GradientBannerState extends State<GradientBanner> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 6));
+class _GradientBannerState extends State<GradientBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 6),
+  );
 
   @override
   void didChangeDependencies() {
@@ -295,42 +416,65 @@ class _GradientBannerState extends State<GradientBanner> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) => RepaintBoundary(
-        child: AnimatedBuilder(
-          animation: _c,
-          builder: (_, child) {
-            final t = Curves.easeInOut.transform(_c.value);
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                gradient: LinearGradient(
-                  begin: Alignment(-1 + 0.6 * t, -1),
-                  end: Alignment(1, 1 - 0.6 * t),
-                  colors: [AppColors.fuchsia, Color.lerp(AppColors.fuchsia, AppColors.charcoal, 0.55)!],
+    child: AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) {
+        final t = Curves.easeInOut.transform(_c.value);
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            gradient: LinearGradient(
+              begin: Alignment(-1 + 0.6 * t, -1),
+              end: Alignment(1, 1 - 0.6 * t),
+              colors: [
+                AppColors.fuchsia,
+                Color.lerp(AppColors.fuchsia, AppColors.charcoal, 0.55)!,
+              ],
+            ),
+            boxShadow: softShadow(
+              color: AppColors.fuchsia,
+              alpha: 0.28,
+              blur: 26,
+              y: 14,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -30 + 14 * t,
+                  top: -34 + 10 * t,
+                  child: _circle(120, 0.10),
                 ),
-                boxShadow: softShadow(color: AppColors.fuchsia, alpha: 0.28, blur: 26, y: 14),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                child: Stack(
-                  children: [
-                    Positioned(right: -30 + 14 * t, top: -34 + 10 * t, child: _circle(120, 0.10)),
-                    Positioned(right: 40 - 12 * t, bottom: -48, child: _circle(96, 0.08)),
-                    Positioned(left: -20, bottom: -30 + 8 * t, child: _circle(70, 0.07)),
-                    Padding(padding: widget.padding, child: child),
-                  ],
+                Positioned(
+                  right: 40 - 12 * t,
+                  bottom: -48,
+                  child: _circle(96, 0.08),
                 ),
-              ),
-            );
-          },
-          child: widget.child,
-        ),
-      );
+                Positioned(
+                  left: -20,
+                  bottom: -30 + 8 * t,
+                  child: _circle(70, 0.07),
+                ),
+                Padding(padding: widget.padding, child: child),
+              ],
+            ),
+          ),
+        );
+      },
+      child: widget.child,
+    ),
+  );
 
   static Widget _circle(double d, double a) => Container(
-        width: d,
-        height: d,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.cream.withValues(alpha: a)),
-      );
+    width: d,
+    height: d,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: AppColors.cream.withValues(alpha: a),
+    ),
+  );
 }
 
 class NavItem {
@@ -342,7 +486,12 @@ class NavItem {
 
 /// Floating bottom navigation with an animated selected pill.
 class AppBottomNav extends StatelessWidget {
-  const AppBottomNav({super.key, required this.items, required this.index, required this.onChanged});
+  const AppBottomNav({
+    super.key,
+    required this.items,
+    required this.index,
+    required this.onChanged,
+  });
 
   final List<NavItem> items;
   final int index;
@@ -374,7 +523,9 @@ class AppBottomNav extends StatelessWidget {
                     curve: AppMotion.curve,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: i == index ? AppColors.fuchsia.withValues(alpha: 0.14) : Colors.transparent,
+                      color: i == index
+                          ? AppColors.fuchsia.withValues(alpha: 0.14)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
@@ -382,11 +533,14 @@ class AppBottomNav extends StatelessWidget {
                       children: [
                         AnimatedSwitcher(
                           duration: AppMotion.tap,
-                          transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+                          transitionBuilder: (c, a) =>
+                              ScaleTransition(scale: a, child: c),
                           child: Icon(
                             i == index ? items[i].selectedIcon : items[i].icon,
                             key: ValueKey(i == index),
-                            color: i == index ? AppColors.fuchsia : scheme.onSurface.withValues(alpha: 0.55),
+                            color: i == index
+                                ? AppColors.fuchsia
+                                : scheme.onSurface.withValues(alpha: 0.55),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -394,8 +548,12 @@ class AppBottomNav extends StatelessWidget {
                           duration: AppMotion.hover,
                           style: TextStyle(
                             fontSize: 11.5,
-                            fontWeight: i == index ? FontWeight.w800 : FontWeight.w500,
-                            color: i == index ? AppColors.fuchsia : scheme.onSurface.withValues(alpha: 0.6),
+                            fontWeight: i == index
+                                ? FontWeight.w800
+                                : FontWeight.w500,
+                            color: i == index
+                                ? AppColors.fuchsia
+                                : scheme.onSurface.withValues(alpha: 0.6),
                           ),
                           child: Text(items[i].label),
                         ),
@@ -421,8 +579,12 @@ class SuccessCheck extends StatefulWidget {
   State<SuccessCheck> createState() => _SuccessCheckState();
 }
 
-class _SuccessCheckState extends State<SuccessCheck> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: AppMotion.success + const Duration(milliseconds: 200));
+class _SuccessCheckState extends State<SuccessCheck>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: AppMotion.success + const Duration(milliseconds: 200),
+  );
   bool _started = false;
 
   @override
@@ -441,10 +603,10 @@ class _SuccessCheckState extends State<SuccessCheck> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: widget.size * 1.6,
-        height: widget.size * 1.6,
-        child: CustomPaint(painter: _CheckPainter(_c, widget.size)),
-      );
+    width: widget.size * 1.6,
+    height: widget.size * 1.6,
+    child: CustomPaint(painter: _CheckPainter(_c, widget.size)),
+  );
 }
 
 class _CheckPainter extends CustomPainter {
@@ -457,7 +619,9 @@ class _CheckPainter extends CustomPainter {
     final c = size.center(Offset.zero);
     final pop = Curves.easeOutBack.transform((t.value / 0.5).clamp(0.0, 1.0));
     canvas.drawCircle(c, d / 2 * pop, Paint()..color = AppColors.fuchsia);
-    final draw = Curves.easeOut.transform(((t.value - 0.4) / 0.4).clamp(0.0, 1.0));
+    final draw = Curves.easeOut.transform(
+      ((t.value - 0.4) / 0.4).clamp(0.0, 1.0),
+    );
     final check = Path()
       ..moveTo(c.dx - d * 0.2, c.dy + d * 0.02)
       ..lineTo(c.dx - d * 0.05, c.dy + d * 0.17)
@@ -480,7 +644,9 @@ class _CheckPainter extends CustomPainter {
         canvas.drawCircle(
           c + Offset(math.cos(a), math.sin(a)) * dist,
           3.5 * (1 - burst) + 1,
-          Paint()..color = (i.isEven ? AppColors.fuchsia : AppColors.beige).withValues(alpha: 1 - burst),
+          Paint()
+            ..color = (i.isEven ? AppColors.fuchsia : AppColors.beige)
+                .withValues(alpha: 1 - burst),
         );
       }
     }
@@ -492,7 +658,13 @@ class _CheckPainter extends CustomPainter {
 
 /// Tappable settings-style row used in profile menus.
 class MenuTile extends StatelessWidget {
-  const MenuTile({super.key, required this.icon, required this.title, required this.onTap, this.danger = false});
+  const MenuTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.danger = false,
+  });
 
   final IconData icon;
   final String title;
@@ -502,24 +674,31 @@ class MenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = scheme.brightness == Brightness.dark;
     final color = danger ? AppColors.fuchsia : scheme.onSurface;
-    return Pressable(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: HoverSurface(
+        onTap: onTap,
+        radius: AppRadius.md,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: dark ? AppColors.graphite : Colors.white,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          boxShadow: softShadow(alpha: dark ? 0.2 : 0.05, blur: 16, y: 6),
-        ),
         child: Row(
           children: [
-            Icon(icon, color: danger ? AppColors.fuchsia : color.withValues(alpha: 0.8)),
+            Icon(
+              icon,
+              color: danger ? AppColors.fuchsia : color.withValues(alpha: 0.8),
+            ),
             const SizedBox(width: 14),
-            Expanded(child: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: color))),
-            if (!danger) Icon(Icons.chevron_right_rounded, color: color.withValues(alpha: 0.4)),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(fontWeight: FontWeight.w600, color: color),
+              ),
+            ),
+            if (!danger)
+              Icon(
+                Icons.chevron_right_rounded,
+                color: color.withValues(alpha: 0.4),
+              ),
           ],
         ),
       ),

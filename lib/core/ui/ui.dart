@@ -5,5 +5,7 @@ export 'brand_logo.dart';
 export 'components.dart';
 export 'fade_slide_in.dart';
 export 'illustrations.dart';
+export 'motion.dart';
 export 'pressable.dart';
+export 'surfaces.dart';
 export 'tokens.dart';

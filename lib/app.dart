@@ -24,7 +24,7 @@ class RideFreelyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GetMaterialApp(
         title: 'DriveRent',
-        defaultTransition: Transition.fadeIn,
+        customTransition: AppPageTransition(),
         transitionDuration: AppMotion.page,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),

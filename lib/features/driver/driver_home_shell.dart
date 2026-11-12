@@ -29,12 +29,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
       body: AnimatedGradientBackground(
         child: SafeArea(
           bottom: false,
-          child: AnimatedSwitcher(
-            duration: AppMotion.page,
-            switchInCurve: AppMotion.curve,
-            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-            child: KeyedSubtree(key: ValueKey(_index), child: tabs[_index]),
-          ),
+          child: AnimatedTabSwitcher(index: _index, builder: (i) => tabs[i]),
         ),
       ),
       bottomNavigationBar: AppBottomNav(

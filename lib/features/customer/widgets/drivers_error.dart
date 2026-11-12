@@ -13,21 +13,33 @@ class DriversError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final problem = controller.problem.value;
-    final needsSettings = problem == LocationProblem.deniedForever || problem == LocationProblem.servicesOff;
+    final needsSettings =
+        problem == LocationProblem.deniedForever ||
+        problem == LocationProblem.servicesOff;
     return EmptyState(
-      icon: problem != null ? Icons.location_off_rounded : Icons.cloud_off_rounded,
-      title: problem != null ? 'We need your location' : 'Could not load drivers',
+      icon: problem != null
+          ? Icons.location_off_rounded
+          : Icons.cloud_off_rounded,
+      title: problem != null
+          ? 'We need your location'
+          : 'Could not load drivers',
       body: controller.error.value ?? '',
       action: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (needsSettings)
-            AppButton(label: 'Open settings', compact: true, onPressed: () => Get.find<LocationService>().openSettings()),
+            AppButton(
+              label: 'Open settings',
+              compact: true,
+              onPressed: () => Get.find<LocationService>().openSettings(),
+            ),
           if (needsSettings) const SizedBox(height: 8),
           AppButton(
             label: 'Try again',
             compact: true,
-            style: needsSettings ? AppButtonStyle.secondary : AppButtonStyle.primary,
+            style: needsSettings
+                ? AppButtonStyle.secondary
+                : AppButtonStyle.primary,
             onPressed: controller.load,
           ),
         ],

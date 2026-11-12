@@ -51,12 +51,7 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> {
                   child: const Text('UI preview: sample content', textAlign: TextAlign.center, style: TextStyle(color: AppColors.cream, fontSize: 11.5)),
                 ),
               Expanded(
-                child: AnimatedSwitcher(
-                  duration: AppMotion.page,
-                  switchInCurve: AppMotion.curve,
-                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-                  child: KeyedSubtree(key: ValueKey(_index), child: tabs[_index]),
-                ),
+                child: AnimatedTabSwitcher(index: _index, builder: (i) => tabs[i]),
               ),
             ],
           ),

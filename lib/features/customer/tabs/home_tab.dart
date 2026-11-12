@@ -45,19 +45,16 @@ class HomeTab extends StatelessWidget {
         const SizedBox(height: 18),
         FadeSlideIn(
           delay: const Duration(milliseconds: 60),
-          child: Pressable(
+          child: HoverSurface(
             onTap: _openDrivers,
-            hoverScale: 1.01,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppRadius.md), boxShadow: softShadow(alpha: 0.06, blur: 18, y: 8)),
-              child: Row(
-                children: [
-                  Icon(Icons.search_rounded, color: AppColors.charcoal.withValues(alpha: 0.6)),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text('Search drivers by name', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.charcoal.withValues(alpha: 0.6)))),
-                ],
-              ),
+            radius: AppRadius.md,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            child: Row(
+              children: [
+                Icon(Icons.search_rounded, color: AppColors.charcoal.withValues(alpha: 0.6)),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Search drivers by name', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.charcoal.withValues(alpha: 0.6)))),
+              ],
             ),
           ),
         ),
