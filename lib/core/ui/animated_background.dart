@@ -1,23 +1,33 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import 'tokens.dart';
 
 /// Slowly drifting gradient blobs behind a screen. Static when reduced motion is on.
 class AnimatedGradientBackground extends StatefulWidget {
-  const AnimatedGradientBackground({super.key, required this.child, this.dark = true});
+  const AnimatedGradientBackground({
+    super.key,
+    required this.child,
+    this.dark = true,
+  });
 
   final Widget child;
   final bool dark;
 
   @override
-  State<AnimatedGradientBackground> createState() => _AnimatedGradientBackgroundState();
+  State<AnimatedGradientBackground> createState() =>
+      _AnimatedGradientBackgroundState();
 }
 
-class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: AppMotion.background);
+class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: AppMotion.background,
+  );
 
   @override
   void didChangeDependencies() {
@@ -36,26 +46,33 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
-        fit: StackFit.expand,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: widget.dark
-                  ? AppGradients.dark
-                  : const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [AppColors.cream, AppColors.cream],
-                    ),
-            ),
+  Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
+    // Light status-bar icons on dark backgrounds, dark icons on light ones.
+    value: widget.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: widget.dark
+                ? AppGradients.dark
+                : const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.cream, AppColors.cream],
+                  ),
           ),
-          RepaintBoundary(
-            child: CustomPaint(painter: _BlobPainter(_c, widget.dark), size: Size.infinite),
+        ),
+        RepaintBoundary(
+          child: CustomPaint(
+            painter: _BlobPainter(_c, widget.dark),
+            size: Size.infinite,
           ),
-          widget.child,
-        ],
-      );
+        ),
+        widget.child,
+      ],
+    ),
+  );
 }
 
 class _BlobPainter extends CustomPainter {
@@ -80,7 +97,10 @@ class _BlobPainter extends CustomPainter {
       final radius = size.shortestSide * (0.55 + 0.12 * i);
       final paint = Paint()
         ..shader = RadialGradient(
-          colors: [blobs[i].$1.withValues(alpha: blobs[i].$2), blobs[i].$1.withValues(alpha: 0)],
+          colors: [
+            blobs[i].$1.withValues(alpha: blobs[i].$2),
+            blobs[i].$1.withValues(alpha: 0),
+          ],
         ).createShader(Rect.fromCircle(center: center, radius: radius));
       canvas.drawCircle(center, radius, paint);
     }

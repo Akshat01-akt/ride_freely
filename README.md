@@ -44,6 +44,14 @@ Android blocks plain-HTTP traffic on release builds; use HTTPS for anything beyo
 
 On first launch the app asks "I need a driver" or "I'm a driver", remembers the choice, and shows that interface's own login, registration and home screens. Use "Switch account type" on the login screen to change it.
 
+### Design review without a backend
+
+```bash
+flutter run -t lib/main_preview.dart --dart-define=UI_PREVIEW=true
+```
+
+Shows every screen with clearly labelled sample content (drivers, wallet, booking). Normal builds never show sample data: until the backend has drivers, bookings and a wallet, those screens show empty states. Do not use `UI_PREVIEW` in release builds.
+
 ## Flutter tests
 
 ```bash

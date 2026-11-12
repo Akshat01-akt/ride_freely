@@ -2,13 +2,11 @@
 // seeds clearly labelled sample data and steps through every screen so the design can be reviewed.
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'app.dart';
 import 'core/core.dart';
-import 'features/customer/data/models.dart';
 import 'features/customer/data/sources.dart';
 import 'routes.dart';
 

@@ -49,7 +49,7 @@ class BookingConfirmedPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const Divider(height: 28),
+                        const Divider(height: 28, color: AppColors.beige),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [const Text('Booking ID'), Text('#${booking.id}', style: const TextStyle(fontWeight: FontWeight.w800))],
