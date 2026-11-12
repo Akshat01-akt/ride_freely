@@ -54,6 +54,11 @@ async def login_driver(data: LoginRequest, session: AsyncSession = Depends(get_s
     return await _login(data, session, Role.DRIVER)
 
 
+@router.post("/admin/login", response_model=TokenPair)
+async def login_admin(data: LoginRequest, session: AsyncSession = Depends(get_session)):
+    return await _login(data, session, Role.ADMIN)
+
+
 @router.post("/refresh", response_model=TokenPair)
 async def refresh(data: RefreshRequest, session: AsyncSession = Depends(get_session)):
     try:

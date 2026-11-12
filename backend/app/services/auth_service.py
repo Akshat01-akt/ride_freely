@@ -85,6 +85,20 @@ async def register_driver(session: AsyncSession, data: DriverRegister) -> User:
     return user
 
 
+async def create_admin(session: AsyncSession, full_name: str, phone: str, password: str) -> User:
+    data = CustomerRegister(full_name=full_name, phone=phone, password=password)
+    try:
+        user = await _create_user(session, data, Role.ADMIN)
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise PhoneAlreadyRegistered from None
+    except PhoneAlreadyRegistered:
+        await session.rollback()
+        raise
+    return user
+
+
 async def authenticate(session: AsyncSession, phone: str, password: str, role: Role) -> User:
     user = await session.scalar(select(User).where(User.phone == phone))
     hashed = user.password_hash if user is not None else _DUMMY_HASH
