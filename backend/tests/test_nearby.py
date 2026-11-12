@@ -43,6 +43,7 @@ async def test_response_exposes_no_exact_location_or_private_details(client, db_
     [d] = (await _search(client, c)).json()["drivers"]
     assert set(d) == {"id", "name", "hourly_rate", "rating", "experience_years", "verified", "distance_meters"}
     assert d["verified"] is True and d["name"] == "Ravi Kumar"
+    assert d["hourly_rate"] == "150.00"  # money is a string, like the rest of the API
 
 
 async def test_default_radius_is_5km_and_it_can_be_widened(client, db_session):

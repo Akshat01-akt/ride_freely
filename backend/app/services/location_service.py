@@ -86,8 +86,8 @@ async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, l
         {
             "id": r.id,
             "name": r.full_name,
-            "hourly_rate": r.hourly_rate,
-            "rating": r.rating,
+            "hourly_rate": str(r.hourly_rate),
+            "rating": str(r.rating),
             "experience_years": r.experience_years,
             "verified": True,
             "distance_meters": round(float(r.distance), 1),
