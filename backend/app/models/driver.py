@@ -33,9 +33,9 @@ class DriverProfile(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
-    licence_number: Mapped[str] = mapped_column(String(50))
-    experience_years: Mapped[int] = mapped_column(Integer)
-    hourly_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    licence_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    experience_years: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     verification_status: Mapped[VerificationStatus] = mapped_column(
         _enum(VerificationStatus), default=VerificationStatus.PENDING, server_default="PENDING"
     )

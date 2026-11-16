@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.auth_service import PhoneAlreadyRegistered, create_admin
+from app.services.auth_service import IdentifierTaken, create_admin
 from tests.helpers import ADMIN, CUSTOMER, DRIVER, admin_headers, bearer
 
 
@@ -31,7 +31,7 @@ async def test_admin_login_needs_the_right_password(client, db_session):
 
 async def test_create_admin_rejects_duplicate_phone_and_short_password(db_session):
     await create_admin(db_session, "Admin", ADMIN["phone"], ADMIN["password"])
-    with pytest.raises(PhoneAlreadyRegistered):
+    with pytest.raises(IdentifierTaken):
         await create_admin(db_session, "Other", ADMIN["phone"], ADMIN["password"])
     with pytest.raises(ValueError):
         await create_admin(db_session, "Weak", "+919000000002", "short")

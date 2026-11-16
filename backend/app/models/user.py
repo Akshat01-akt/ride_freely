@@ -20,8 +20,9 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     full_name: Mapped[str] = mapped_column(String(120))
-    phone: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    phone: Mapped[str | None] = mapped_column(String(20), unique=True, index=True, nullable=True)
     email: Mapped[str | None] = mapped_column(String(254), nullable=True)
+    email_normalized: Mapped[str | None] = mapped_column(String(254), unique=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=20, values_callable=lambda e: [m.value for m in e]))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")

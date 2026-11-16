@@ -9,14 +9,14 @@ import sys
 from pydantic import ValidationError
 
 from app.core.database import SessionLocal
-from app.services.auth_service import PhoneAlreadyRegistered, create_admin
+from app.services.auth_service import IdentifierTaken, create_admin
 
 
 async def _create_admin(name: str, phone: str, password: str) -> int:
     async with SessionLocal() as session:
         try:
             await create_admin(session, name, phone, password)
-        except PhoneAlreadyRegistered:
+        except IdentifierTaken:
             print("That phone number is already registered.", file=sys.stderr)
             return 1
         except (ValueError, ValidationError) as exc:
