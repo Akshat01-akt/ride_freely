@@ -22,7 +22,7 @@ Future<Fakes> _pump(WidgetTester t, {ApiException? loginError, UserRole role = U
 }
 
 Future<void> _failLogin(WidgetTester t) async {
-  await t.enterText(find.byKey(const Key('phone')), '9876543210');
+  await t.enterText(find.byKey(const Key('identifier')), '9876543210');
   await t.enterText(find.byKey(const Key('password')), 'password123');
   await t.tap(find.widgetWithText(AppButton, 'Log in'));
   await t.pumpAndSettle();
@@ -109,7 +109,7 @@ void main() {
     Get.toNamed('/customer/register');
     await t.pumpAndSettle();
     await t.enterText(find.byKey(const Key('name')), 'Asha Rao');
-    await t.enterText(find.byKey(const Key('phone')), '9876543210');
+    await t.enterText(find.byKey(const Key('identifier')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'password123');
     await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();

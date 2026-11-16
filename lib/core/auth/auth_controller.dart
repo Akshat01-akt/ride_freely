@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import 'auth_repository.dart';
 
@@ -38,8 +39,11 @@ class AuthController extends GetxController {
     await _loadProfile();
   }
 
-  Future<bool> login(String phone, String password) =>
-      _authenticate(() => _repo.login(phone, password));
+  Future<bool> login(String identifier, String password) =>
+      _authenticate(() => _repo.login(identifier, password));
+
+  /// The authenticated HTTP client for this role, for features that call the server themselves.
+  ApiClient get client => _repo.client;
 
   Future<bool> register(Map<String, dynamic> fields) =>
       _authenticate(() => _repo.register(fields));

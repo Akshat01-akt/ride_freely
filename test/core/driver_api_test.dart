@@ -12,6 +12,7 @@ import 'fake_adapter.dart';
 }
 
 void main() {
+  _applicationTests();
   test('going online sends AVAILABLE and offline sends OFFLINE', () async {
     final s = _setup((o) => (status: 200, body: {'availability_status': 'AVAILABLE'}));
     await s.api.setAvailability(true);
@@ -62,6 +63,57 @@ void main() {
     await expectLater(
       s.api.setAvailability(true),
       throwsA(isA<ApiException>().having((e) => e.message, 'message', contains('approved'))),
+    );
+  });
+}
+
+void _applicationTests() {
+  test('applicationForm reads the server form, treating unknown types as unknown', () async {
+    final s = _setup((o) => (status: 200, body: {
+          'version': 4,
+          'fields': [
+            {'key': 'licence_number', 'label': 'Licence', 'field_type': 'text', 'required': true},
+            {'key': 'sig', 'label': 'Signature', 'field_type': 'hologram', 'required': false},
+          ],
+        }));
+    final form = await s.api.applicationForm();
+    expect(s.adapter.requests.single.path, '/forms/driver');
+    expect(form.version, 4);
+    expect(form.fields.map((f) => f.type), [FieldType.text, FieldType.unknown]);
+    expect(form.needsNewerApp, isFalse);
+    expect(form.visible.length, 1);
+  });
+
+  test('application reads the block inside /drivers/me and lists flagged items', () async {
+    final s = _setup((o) => (status: 200, body: {
+          'application': {
+            'status': 'REJECTED',
+            'answers': [
+              {'key': 'hourly_rate', 'value': '999', 'status': 'REJECTED', 'review_note': 'Too high'},
+              {'key': 'licence_number', 'value': 'DL-1', 'status': 'APPROVED', 'review_note': null},
+            ],
+            'documents': [
+              {'id': 'x', 'doc_type': 'LICENCE', 'status': 'REJECTED', 'review_note': 'Blurry'},
+            ],
+            'needs_update': ['badge_no'],
+          },
+        }));
+    final app = await s.api.application();
+    expect(s.adapter.requests.single.path, '/drivers/me');
+    expect(app.flagged, {'hourly_rate', 'LICENCE'});
+    expect(app.needsUpdate, ['badge_no']);
+    expect(app.answers['hourly_rate']!.note, 'Too high');
+  });
+
+  test('submitApplication posts the answers and a 422 exposes the field errors', () async {
+    final ok = _setup((o) => (status: 200, body: {}));
+    await ok.api.submitApplication({'hourly_rate': '150'});
+    expect(ok.adapter.requests.single.path, '/drivers/application');
+    expect(ok.adapter.requests.single.data, {'answers': {'hourly_rate': '150'}});
+    final bad = _setup((o) => (status: 422, body: {'detail': [{'loc': ['answers', 'hourly_rate'], 'msg': 'The rate must be more than 0', 'type': 'value_error'}]}));
+    await expectLater(
+      bad.api.submitApplication({'hourly_rate': '0'}),
+      throwsA(isA<ApiException>().having((e) => e.fieldErrors, 'fieldErrors', {'hourly_rate': 'The rate must be more than 0'})),
     );
   });
 }

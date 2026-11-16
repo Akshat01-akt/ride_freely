@@ -14,4 +14,23 @@ void main() {
       expect(requiredPhone(bad), isNotNull, reason: bad);
     }
   });
+
+  test('identifier accepts an email address or an Indian mobile number', () {
+    for (final ok in ['asha@example.com', ' asha@example.com ', '98765 43210', '+91 98765 43210']) {
+      expect(requiredIdentifier(ok), isNull, reason: ok);
+    }
+  });
+
+  test('identifier rejects empty and garbage', () {
+    expect(requiredIdentifier(''), 'Enter your email or mobile number');
+    expect(requiredIdentifier('   '), 'Enter your email or mobile number');
+    for (final bad in ['asha@', '@example.com', 'asha@example', '12345', 'hello']) {
+      expect(requiredIdentifier(bad), isNotNull, reason: bad);
+    }
+  });
+
+  test('identifier fields pick email or phone', () {
+    expect(identifierFields(' a@b.co '), {'email': 'a@b.co'});
+    expect(identifierFields('98765 43210'), {'phone': '98765 43210'});
+  });
 }

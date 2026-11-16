@@ -91,6 +91,9 @@ class ApiClient {
   Future<Map<String, dynamic>> postJson(String path, Map<String, dynamic> body) async =>
       _asMap(await _send(() => dio.post<dynamic>(path, data: body)));
 
+  Future<Map<String, dynamic>> putJson(String path, Map<String, dynamic> body) async =>
+      _asMap(await _send(() => dio.put<dynamic>(path, data: body)));
+
   Future<Map<String, dynamic>> patchJson(String path, Map<String, dynamic> body) async =>
       _asMap(await _send(() => dio.patch<dynamic>(path, data: body)));
 

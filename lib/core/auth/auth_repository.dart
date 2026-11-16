@@ -19,8 +19,9 @@ class AuthRepository {
     await _client.storage.save(TokenPair.fromJson(json));
   }
 
-  Future<void> login(String phone, String password) async {
-    final json = await _client.postJson('$_prefix/login', {'phone': phone, 'password': password});
+  /// [identifier] is an email address or a mobile number.
+  Future<void> login(String identifier, String password) async {
+    final json = await _client.postJson('$_prefix/login', {'identifier': identifier, 'password': password});
     await _client.storage.save(TokenPair.fromJson(json));
   }
 

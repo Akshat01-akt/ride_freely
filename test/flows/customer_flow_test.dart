@@ -37,7 +37,7 @@ void main() {
     await _pumpApp(t, repo);
     await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
-    expect(find.text('Enter your phone number'), findsOneWidget);
+    expect(find.text('Enter your email or mobile number'), findsOneWidget);
     expect(find.text('Enter your password'), findsOneWidget);
     expect(repo.loginCalls, 0);
   });
@@ -45,7 +45,7 @@ void main() {
   testWidgets('successful login navigates to the home shell', (t) async {
     final repo = FakeAuthRepository(UserRole.customer);
     await _pumpApp(t, repo);
-    await t.enterText(find.byKey(const Key('phone')), '9876543210');
+    await t.enterText(find.byKey(const Key('identifier')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'password123');
     await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
@@ -55,7 +55,7 @@ void main() {
 
   testWidgets('failed login shows the server message and stays on login', (t) async {
     await _pumpApp(t, FakeAuthRepository(UserRole.customer, loginError: 'Invalid phone or password'));
-    await t.enterText(find.byKey(const Key('phone')), '9876543210');
+    await t.enterText(find.byKey(const Key('identifier')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'password123');
     await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
@@ -70,7 +70,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(CustomerRegisterPage), findsOneWidget);
     await t.enterText(find.byKey(const Key('name')), 'Asha Rao');
-    await t.enterText(find.byKey(const Key('phone')), '9876543210');
+    await t.enterText(find.byKey(const Key('identifier')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'short');
     await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();
@@ -84,7 +84,7 @@ void main() {
     Get.toNamed(Routes.register(UserRole.customer));
     await t.pumpAndSettle();
     await t.enterText(find.byKey(const Key('name')), 'Asha Rao');
-    await t.enterText(find.byKey(const Key('phone')), '9876543210');
+    await t.enterText(find.byKey(const Key('identifier')), '9876543210');
     await t.enterText(find.byKey(const Key('password')), 'password123');
     await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();

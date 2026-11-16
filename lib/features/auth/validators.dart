@@ -12,3 +12,17 @@ String? optionalEmail(String? v) {
   final s = (v ?? '').trim();
   return s.isEmpty || RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s) ? null : 'Enter a valid email';
 }
+
+/// One field for either: an email address (has "@") or an Indian mobile number.
+String? requiredIdentifier(String? v) {
+  final s = (v ?? '').trim();
+  if (s.isEmpty) return 'Enter your email or mobile number';
+  if (s.contains('@')) return optionalEmail(s) == null ? null : 'Enter a valid email address';
+  return requiredPhone(s) == null ? null : 'Enter a valid email or 10-digit mobile number';
+}
+
+/// The registration fields the server expects for what was typed in the identifier box.
+Map<String, String> identifierFields(String identifier) {
+  final s = identifier.trim();
+  return s.contains('@') ? {'email': s} : {'phone': s};
+}

@@ -50,6 +50,21 @@ class _PreviewDriverApi implements DriverApi {
   ];
 
   @override
+  Future<FormSpec> applicationForm() async => FormSpec.fromJson({
+    'version': 1,
+    'fields': [
+      {'key': 'licence_number', 'label': 'Driving licence number', 'field_type': 'text', 'required': true},
+      {'key': 'LICENCE', 'label': 'Driving licence', 'field_type': 'document', 'required': true},
+    ],
+  });
+
+  @override
+  Future<DriverApplication> application() async => const DriverApplication();
+
+  @override
+  Future<void> submitApplication(Map<String, String> answers) async {}
+
+  @override
   Future<void> uploadDocument({
     required String type,
     required List<int> bytes,

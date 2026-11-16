@@ -5,6 +5,7 @@ import '../../core/core.dart';
 import '../../routes.dart';
 import '../auth/auth_scaffold.dart';
 import '../bookings/bookings.dart';
+import 'application_page.dart';
 import 'availability_controller.dart';
 import 'earnings.dart';
 import 'requests_tab.dart';
@@ -30,6 +31,15 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   @override
   Widget build(BuildContext context) {
     final auth = authFor(UserRole.driver);
+    // A driver who has not applied yet (or was sent back for changes) fills in the application first.
+    return Obx(() {
+      final status = auth.profile['verification_status'];
+      if (status == 'NOT_SUBMITTED' || status == 'REJECTED') return const ApplicationPage();
+      return _shell(auth);
+    });
+  }
+
+  Widget _shell(AuthController auth) {
     final tabs = <Widget>[
       _DashboardTab(auth: auth),
       const RequestsTab(),
@@ -94,6 +104,7 @@ class _DashboardTab extends StatefulWidget {
 
 class _DashboardTabState extends State<_DashboardTab> {
   final _availability = Get.find<AvailabilityController>();
+  bool _updateDismissed = false;
 
   @override
   void initState() {
@@ -123,6 +134,14 @@ class _DashboardTabState extends State<_DashboardTab> {
               delay: const Duration(milliseconds: 60),
               child: _VerificationBanner(
                 onUpload: () => Get.toNamed(Routes.documents),
+              ),
+            ),
+          if (approved && !_updateDismissed && _needsUpdate(p))
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 60),
+              child: _UpdateCard(
+                onUpdate: () => Get.toNamed(Routes.application),
+                onDismiss: () => setState(() => _updateDismissed = true),
               ),
             ),
           FadeSlideIn(
@@ -240,6 +259,51 @@ class _DashboardTabState extends State<_DashboardTab> {
       );
     });
   }
+}
+
+bool _needsUpdate(Map<String, dynamic> profile) {
+  final application = profile['application'];
+  return application is Map && (application['needs_update'] as List?)?.isNotEmpty == true;
+}
+
+/// Shown to approved drivers when the admin added a required question: they stay bookable meanwhile.
+class _UpdateCard extends StatelessWidget {
+  const _UpdateCard({required this.onUpdate, required this.onDismiss});
+
+  final VoidCallback onUpdate;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(AppRadius.md)),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.edit_note_rounded, color: AppColors.fuchsia),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Please update your details', style: TextStyle(color: AppColors.black, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 2),
+              const Text('We added a few new questions. You stay bookable while you answer them.', style: TextStyle(color: AppColors.charcoal, height: 1.35)),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  AppButton(label: 'Update now', compact: true, onPressed: onUpdate),
+                  const SizedBox(width: 8),
+                  TextButton(onPressed: onDismiss, child: const Text('Later')),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _VerificationBanner extends StatelessWidget {
@@ -377,7 +441,7 @@ class _ProfileTab extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 2),
-              Text('${auth.profile['phone'] ?? ''}'),
+              Text('${auth.profile['phone'] ?? auth.profile['email'] ?? ''}'),
               const SizedBox(height: 2),
               Text('Licence ${auth.profile['licence_number'] ?? ''}'),
             ],
