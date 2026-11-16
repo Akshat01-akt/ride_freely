@@ -110,3 +110,36 @@ async def nearby_drivers(session: AsyncSession, redis: Redis, latitude: float, l
         for r, live in zip(rows, fresh, strict=True)
         if live is not None
     ]
+
+
+LIVE_STATUSES = ("AVAILABLE", "RESERVED", "BOOKED", "ON_TRIP")
+
+
+async def live_drivers(session: AsyncSession, redis: Redis) -> list[dict]:
+    """Where online drivers are right now (fresh within LOCATION_TTL_SECONDS), for the admin map."""
+    rows = (
+        await session.execute(
+            text(
+                """
+                SELECT dp.id, u.full_name, dp.availability_status AS status, l.heading, l.speed, l.recorded_at,
+                       ST_Y(l.location::geometry) AS latitude, ST_X(l.location::geometry) AS longitude
+                FROM driver_locations l
+                JOIN driver_profiles dp ON dp.id = l.driver_id
+                JOIN users u ON u.id = dp.user_id
+                WHERE dp.availability_status = ANY(:statuses) AND u.is_active
+                  AND l.recorded_at > now() - make_interval(secs => :fresh)
+                ORDER BY u.full_name, dp.id
+                """
+            ),
+            {"statuses": list(LIVE_STATUSES), "fresh": LOCATION_TTL_SECONDS},
+        )
+    ).all()
+    if not rows:
+        return []
+    fresh = await redis.mget([location_key(r.id) for r in rows])
+    return [
+        {"id": r.id, "name": r.full_name, "status": r.status, "latitude": r.latitude, "longitude": r.longitude,
+         "heading": r.heading, "speed": r.speed, "recorded_at": r.recorded_at}
+        for r, live in zip(rows, fresh, strict=True)
+        if live is not None
+    ]

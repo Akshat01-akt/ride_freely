@@ -10,6 +10,8 @@ from app.models.base import Base
 
 
 class DocType(StrEnum):
+    """The document keys the default form starts with. Admins can add more keys, so the column is a plain string."""
+
     LICENCE = "LICENCE"
     ID_PROOF = "ID_PROOF"
     PHOTO = "PHOTO"
@@ -31,7 +33,7 @@ class DriverDocument(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     driver_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("driver_profiles.id", ondelete="CASCADE"), index=True)
-    doc_type: Mapped[DocType] = mapped_column(_enum(DocType))
+    doc_type: Mapped[str] = mapped_column(String(40))
     file_key: Mapped[str] = mapped_column(String(200))
     content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)

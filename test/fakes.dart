@@ -54,6 +54,10 @@ class FakeDriverApi implements DriverApi {
   ApiException? uploadError;
   ApiException? documentsError;
   List<DriverDocument> docs = const [];
+  FormSpec form = const FormSpec(version: 1, fields: []);
+  DriverApplication applicationData = const DriverApplication();
+  ApiException? submitError;
+  final submitted = <Map<String, String>>[];
   Earnings earningsData = Earnings.empty;
   ApiException? earningsError;
   int earningsCalls = 0;
@@ -61,6 +65,24 @@ class FakeDriverApi implements DriverApi {
   /// When set, setAvailability / sendLocation wait for it, so tests can interleave calls.
   Completer<void>? availabilityGate;
   Completer<void>? sendGate;
+
+  int formCalls = 0;
+
+  @override
+  Future<FormSpec> applicationForm() async {
+    formCalls++;
+    return form;
+  }
+
+  @override
+  Future<DriverApplication> application() async => applicationData;
+
+  @override
+  Future<void> submitApplication(Map<String, String> answers) async {
+    calls.add('submitApplication');
+    if (submitError != null) throw submitError!;
+    submitted.add(answers);
+  }
 
   @override
   Future<void> setAvailability(bool online) async {
@@ -271,6 +293,7 @@ class FakeAuthRepository extends AuthRepository {
     this.loginException,
     this.registerException,
     this.verification = 'PENDING',
+    this.needsUpdate = const [],
   }) : super(
          ApiClient(baseUrl: 'http://fake', storage: MemoryTokenStorage()),
          role,
@@ -283,6 +306,7 @@ class FakeAuthRepository extends AuthRepository {
   final ApiException? loginException;
   final ApiException? registerException;
   final String verification;
+  final List<String> needsUpdate;
   int loginCalls = 0;
   int registerCalls = 0;
   Map<String, dynamic>? lastRegister;
@@ -315,6 +339,7 @@ class FakeAuthRepository extends AuthRepository {
           'verification_status': verification,
           'availability_status': 'OFFLINE',
           'rating': '0.00',
+          'application': {'status': verification, 'form_version': 1, 'answers': [], 'documents': [], 'needs_update': needsUpdate},
         }
       : {'full_name': 'Asha Rao', 'phone': '+919876543210', 'email': null};
 

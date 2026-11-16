@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:ride_freely/app.dart';
 import 'package:ride_freely/core/core.dart';
 import 'package:ride_freely/features/auth/login_page.dart';
+import 'package:ride_freely/features/driver/application_page.dart';
+import 'package:ride_freely/features/driver/data/driver_api.dart';
 import 'package:ride_freely/features/driver/driver_home_shell.dart';
 import 'package:ride_freely/features/driver/driver_register_page.dart';
 import 'package:ride_freely/routes.dart';
@@ -28,7 +30,7 @@ Future<void> _openRegister(WidgetTester t) async {
 
 Future<void> _fillCommon(WidgetTester t) async {
   await t.enterText(find.byKey(const Key('name')), 'Ravi Kumar');
-  await t.enterText(find.byKey(const Key('phone')), '9876500000');
+  await t.enterText(find.byKey(const Key('identifier')), '9876500000');
   await t.enterText(find.byKey(const Key('password')), 'password123');
 }
 
@@ -41,7 +43,7 @@ void main() {
   testWidgets('successful login shows the dashboard', (t) async {
     final repo = FakeAuthRepository(UserRole.driver);
     await _pumpApp(t, repo);
-    await t.enterText(find.byKey(const Key('phone')), '9876500000');
+    await t.enterText(find.byKey(const Key('identifier')), '9876500000');
     await t.enterText(find.byKey(const Key('password')), 'password123');
     await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
@@ -52,7 +54,7 @@ void main() {
 
   testWidgets('failed login shows the server message', (t) async {
     await _pumpApp(t, FakeAuthRepository(UserRole.driver, loginError: 'Invalid phone or password'));
-    await t.enterText(find.byKey(const Key('phone')), '9876500000');
+    await t.enterText(find.byKey(const Key('identifier')), '9876500000');
     await t.enterText(find.byKey(const Key('password')), 'password123');
     await t.tap(find.widgetWithText(AppButton, 'Log in'));
     await t.pumpAndSettle();
@@ -60,36 +62,128 @@ void main() {
     expect(find.byType(LoginPage), findsOneWidget);
   });
 
-  testWidgets('driver register requires licence and a positive hourly rate', (t) async {
-    final repo = FakeAuthRepository(UserRole.driver);
+  testWidgets('driver registration asks only for name, email or mobile, and password', (t) async {
+    final repo = FakeAuthRepository(UserRole.driver, verification: 'NOT_SUBMITTED');
     await _pumpApp(t, repo);
     await _openRegister(t);
+    expect(find.byKey(const Key('licence')), findsNothing);
+    expect(find.byKey(const Key('hourly_rate')), findsNothing);
     await _fillCommon(t);
-    await t.enterText(find.byKey(const Key('hourly_rate')), '0');
-    await t.ensureVisible(find.widgetWithText(AppButton, 'Create account'));
-    await t.tap(find.widgetWithText(AppButton, 'Create account'));
-    await t.pumpAndSettle();
-    expect(find.text('Enter your licence number'), findsOneWidget);
-    expect(find.text('Enter a rate above 0'), findsOneWidget);
-    expect(repo.registerCalls, 0);
-  });
-
-  testWidgets('valid driver registration sends driver fields and opens the dashboard', (t) async {
-    final repo = FakeAuthRepository(UserRole.driver);
-    await _pumpApp(t, repo);
-    await _openRegister(t);
-    await _fillCommon(t);
-    await t.enterText(find.byKey(const Key('licence')), 'DL-0420110012345');
-    await t.enterText(find.byKey(const Key('experience')), '6');
-    await t.enterText(find.byKey(const Key('hourly_rate')), '180');
     await t.ensureVisible(find.widgetWithText(AppButton, 'Create account'));
     await t.tap(find.widgetWithText(AppButton, 'Create account'));
     await t.pumpAndSettle();
     expect(repo.registerCalls, 1);
-    expect(repo.lastRegister!['licence_number'], 'DL-0420110012345');
-    expect(repo.lastRegister!['experience_years'], 6);
-    expect(repo.lastRegister!['hourly_rate'], '180');
+    expect(repo.lastRegister, {'full_name': 'Ravi Kumar', 'phone': '9876500000', 'password': 'password123'});
+    expect(find.byType(ApplicationPage), findsOneWidget);
+  });
+
+  testWidgets('registering with an email sends the email', (t) async {
+    final repo = FakeAuthRepository(UserRole.driver, verification: 'NOT_SUBMITTED');
+    await _pumpApp(t, repo);
+    await _openRegister(t);
+    await t.enterText(find.byKey(const Key('name')), 'Ravi Kumar');
+    await t.enterText(find.byKey(const Key('identifier')), 'ravi@example.com');
+    await t.enterText(find.byKey(const Key('password')), 'password123');
+    await t.ensureVisible(find.widgetWithText(AppButton, 'Create account'));
+    await t.tap(find.widgetWithText(AppButton, 'Create account'));
+    await t.pumpAndSettle();
+    expect(repo.lastRegister, {'full_name': 'Ravi Kumar', 'email': 'ravi@example.com', 'password': 'password123'});
+  });
+
+  testWidgets('a driver who has not applied sees the server form, not the dashboard', (t) async {
+    final f = Fakes(storedRole: UserRole.driver, driver: FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'NOT_SUBMITTED'));
+    f.driverApi.form = FormSpec.fromJson({
+      'version': 1,
+      'fields': [
+        {'key': 'licence_number', 'label': 'Driving licence number', 'field_type': 'text', 'required': true},
+        {'key': 'LICENCE', 'label': 'Driving licence', 'field_type': 'document', 'required': true},
+      ],
+    });
+    reduceMotionFor(t);
+    f.install();
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
     expect(find.byType(DriverHomeShell), findsOneWidget);
+    expect(find.byType(ApplicationPage), findsOneWidget);
+    expect(find.text('Your driver application'), findsOneWidget);
+    expect(find.text('Verification pending'), findsNothing);
+    await t.tap(find.text('Submit application'));
+    await t.pump();
+    expect(f.driverApi.submitted, isEmpty); // required answer missing
+    await t.enterText(find.byKey(const Key('field_licence_number')), 'DL-0420110012345');
+    await t.tap(find.text('Submit application'));
+    await t.pumpAndSettle();
+    expect(f.driverApi.submitted, [
+      {'licence_number': 'DL-0420110012345'}
+    ]);
+  });
+
+  testWidgets('a field error from the server is shown on submit', (t) async {
+    final f = Fakes(storedRole: UserRole.driver, driver: FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'NOT_SUBMITTED'));
+    f.driverApi
+      ..form = FormSpec.fromJson({
+        'version': 1,
+        'fields': [
+          {'key': 'licence_number', 'label': 'Driving licence number', 'field_type': 'text', 'required': true},
+        ],
+      })
+      ..submitError = const ApiException('x', statusCode: 422, fieldErrors: {'licence_number': 'This is not valid'});
+    reduceMotionFor(t);
+    f.install();
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('field_licence_number')), 'DL-1');
+    await t.tap(find.text('Submit application'));
+    await t.pumpAndSettle();
+    expect(find.text('Driving licence number: This is not valid'), findsOneWidget);
+  });
+
+  testWidgets('a driver sent back for changes sees the reviewer note and can only edit the flagged item', (t) async {
+    final f = Fakes(storedRole: UserRole.driver, driver: FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'REJECTED'));
+    f.driverApi
+      ..form = FormSpec.fromJson({
+        'version': 1,
+        'fields': [
+          {'key': 'licence_number', 'label': 'Driving licence number', 'field_type': 'text', 'required': true},
+          {'key': 'hourly_rate', 'label': 'Hourly rate', 'field_type': 'number', 'required': true},
+        ],
+      })
+      ..applicationData = DriverApplication.fromJson({
+        'status': 'REJECTED',
+        'answers': [
+          {'key': 'licence_number', 'value': 'DL-1', 'status': 'APPROVED', 'review_note': null},
+          {'key': 'hourly_rate', 'value': '999', 'status': 'REJECTED', 'review_note': 'Too high'},
+        ],
+        'documents': [],
+        'needs_update': [],
+      });
+    reduceMotionFor(t);
+    f.install();
+    await t.pumpWidget(const RideFreelyApp());
+    await t.pumpAndSettle();
+    expect(find.text('Needs changes'), findsOneWidget);
+    expect(find.text('Needs changes: Too high'), findsOneWidget);
+    expect(find.byKey(const Key('field_licence_number')), findsNothing);
+    await t.enterText(find.byKey(const Key('field_hourly_rate')), '150');
+    await t.tap(find.text('Send for review again'));
+    await t.pumpAndSettle();
+    expect(f.driverApi.submitted, [
+      {'hourly_rate': '150'}
+    ]);
+  });
+
+  testWidgets('an approved driver with new required questions sees the update card and stays bookable', (t) async {
+    await _pumpApp(t, FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'APPROVED', needsUpdate: ['badge_no']));
+    expect(find.text('Please update your details'), findsOneWidget);
+    expect(t.widget<Switch>(find.byType(Switch)).onChanged, isNotNull);
+    await t.tap(find.text('Later'));
+    await t.pumpAndSettle();
+    expect(find.text('Please update your details'), findsNothing);
+  });
+
+  testWidgets('an approved driver with nothing new sees no update card', (t) async {
+    await _pumpApp(t, FakeAuthRepository(UserRole.driver, hasToken: true, verification: 'APPROVED'));
+    expect(find.text('Please update your details'), findsNothing);
   });
 
   testWidgets('pending driver sees the verification banner and cannot go online', (t) async {

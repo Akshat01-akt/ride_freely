@@ -10,6 +10,8 @@ import 'features/customer/driver_details_page.dart';
 import 'features/customer/drivers_page.dart';
 import 'features/customer/tracking_page.dart';
 import 'features/customer/customer_register_page.dart';
+import 'features/customer/profile_form_page.dart';
+import 'features/driver/application_page.dart';
 import 'features/driver/documents_page.dart';
 import 'features/driver/driver_home_shell.dart';
 import 'features/driver/driver_register_page.dart';
@@ -37,6 +39,16 @@ class RideFreelyApp extends StatelessWidget {
         name: Routes.documents,
         page: () =>
             RoleTheme(role: UserRole.driver, child: const DocumentsPage()),
+      ),
+      GetPage(
+        name: Routes.application,
+        page: () =>
+            RoleTheme(role: UserRole.driver, child: const ApplicationPage()),
+      ),
+      GetPage(
+        name: Routes.profileForm,
+        page: () =>
+            RoleTheme(role: UserRole.customer, child: const ProfileFormPage()),
       ),
       GetPage(
         name: Routes.drivers,

@@ -14,16 +14,16 @@ from app.services import auth_service as svc
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_BAD_LOGIN = HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid phone or password")
-_PHONE_TAKEN = HTTPException(status.HTTP_409_CONFLICT, "Phone number is already registered")
+_BAD_LOGIN = HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email, mobile number or password")
+_TAKEN = HTTPException(status.HTTP_409_CONFLICT, "Email or mobile number is already registered")
 
 
 @router.post("/customer/register", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
 async def register_customer(data: CustomerRegister, session: AsyncSession = Depends(get_session)):
     try:
         user = await svc.register_customer(session, data)
-    except svc.PhoneAlreadyRegistered:
-        raise _PHONE_TAKEN from None
+    except svc.IdentifierTaken:
+        raise _TAKEN from None
     return svc.issue_tokens(user)
 
 
@@ -31,14 +31,14 @@ async def register_customer(data: CustomerRegister, session: AsyncSession = Depe
 async def register_driver(data: DriverRegister, session: AsyncSession = Depends(get_session)):
     try:
         user = await svc.register_driver(session, data)
-    except svc.PhoneAlreadyRegistered:
-        raise _PHONE_TAKEN from None
+    except svc.IdentifierTaken:
+        raise _TAKEN from None
     return svc.issue_tokens(user)
 
 
 async def _login(data: LoginRequest, session: AsyncSession, role: Role) -> TokenPair:
     try:
-        user = await svc.authenticate(session, data.phone, data.password, role)
+        user = await svc.authenticate(session, data.identifier, data.password, role)
     except svc.InvalidCredentials:
         raise _BAD_LOGIN from None
     return svc.issue_tokens(user)

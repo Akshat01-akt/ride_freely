@@ -32,7 +32,7 @@ async def test_stats_count_users_drivers_and_documents(client, db_session):
     await approved_driver(client, db_session, "+919876500011")
     s = (await client.get(f"{A}/stats", headers=ah)).json()
     assert s["customers"] == 1
-    assert s["drivers"] == {"total": 2, "PENDING": 1, "APPROVED": 1, "REJECTED": 0}
+    assert s["drivers"] == {"total": 2, "NOT_SUBMITTED": 0, "PENDING": 1, "APPROVED": 1, "REJECTED": 0}
     assert s["pending_documents"] == 0
     assert s["admins"] == 1
 

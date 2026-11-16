@@ -3,7 +3,7 @@ import uuid
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
 _INDIAN_MOBILE = re.compile(r"(?:\+91|91|0)?([6-9][0-9]{9})", re.ASCII)
@@ -29,8 +29,17 @@ class TokenPair(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    phone: Phone
+    """`identifier` is an email address or a mobile number; the old `phone` key is still accepted."""
+
+    identifier: Annotated[str, Field(min_length=1, max_length=254)]
     password: Annotated[str, Field(max_length=128)]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy_phone_key(cls, data):
+        if isinstance(data, dict) and "identifier" not in data and "phone" in data:
+            data = {**data, "identifier": data["phone"]}
+        return data
 
 
 class RefreshRequest(BaseModel):
@@ -38,16 +47,22 @@ class RefreshRequest(BaseModel):
 
 
 class CustomerRegister(BaseModel):
+    """Sign-up: a name, an email or a mobile number (or both) and a password. Nothing else."""
+
     full_name: Annotated[str, Field(min_length=2, max_length=120)]
-    phone: Phone
-    password: Password
+    phone: Phone | None = None
     email: EmailStr | None = None
+    password: Password
+
+    @model_validator(mode="after")
+    def _needs_an_identifier(self):
+        if self.phone is None and self.email is None:
+            raise ValueError("Enter an email address or a mobile number")
+        return self
 
 
 class DriverRegister(CustomerRegister):
-    licence_number: Annotated[str, Field(min_length=3, max_length=50)]
-    experience_years: Annotated[int, Field(ge=0, le=60)]
-    hourly_rate: Annotated[Decimal, Field(gt=0, max_digits=8, decimal_places=2)]
+    """Same short form as a customer; licence, experience and rate come later with the application."""
 
 
 class CustomerOut(BaseModel):
@@ -55,9 +70,22 @@ class CustomerOut(BaseModel):
 
     id: uuid.UUID
     full_name: str
-    phone: str
+    phone: str | None
     email: str | None
     default_address: str | None
+    profile: dict | None = None
+
+
+class ApplicationOut(BaseModel):
+    status: str
+    form_version: int
+    answers: list[dict]
+    documents: list[dict]
+    needs_update: list[str]
+
+
+class ApplicationIn(BaseModel):
+    answers: dict[Annotated[str, Field(max_length=40)], Annotated[str, Field(max_length=2000)]] = Field(max_length=60)
 
 
 class DriverOut(BaseModel):
@@ -65,14 +93,15 @@ class DriverOut(BaseModel):
 
     id: uuid.UUID
     full_name: str
-    phone: str
+    phone: str | None
     email: str | None
-    licence_number: str
-    experience_years: int
-    hourly_rate: Decimal
+    licence_number: str | None
+    experience_years: int | None
+    hourly_rate: Decimal | None
     verification_status: str
     availability_status: str
     rating: Decimal
+    application: ApplicationOut | None = None
 
 
 class DocumentOut(BaseModel):

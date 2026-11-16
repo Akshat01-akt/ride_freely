@@ -32,16 +32,15 @@ async def test_customer_register_login_me(client):
     assert "password_hash" not in me.json()
 
 
-async def test_driver_register_creates_pending_offline_profile(client):
+async def test_driver_register_creates_not_submitted_offline_profile(client):
     r = await client.post("/api/v1/auth/driver/register", json=DRIVER)
     assert r.status_code == 201
     me = await client.get("/api/v1/drivers/me", headers=bearer(r.json()))
     assert me.status_code == 200
     body = me.json()
-    assert body["verification_status"] == "PENDING"
+    assert body["verification_status"] == "NOT_SUBMITTED"
     assert body["availability_status"] == "OFFLINE"
-    assert body["licence_number"] == DRIVER["licence_number"]
-    assert float(body["hourly_rate"]) == 180.0
+    assert body["licence_number"] is None and body["hourly_rate"] is None  # filled in by the application form
 
 
 async def test_duplicate_phone_returns_409_across_roles(client, db_session):
@@ -138,11 +137,6 @@ async def test_invalid_phone_returns_422(client):
 
 async def test_short_password_returns_422(client):
     r = await client.post("/api/v1/auth/customer/register", json={**CUSTOMER, "password": "short"})
-    assert r.status_code == 422
-
-
-async def test_driver_requires_positive_hourly_rate(client):
-    r = await client.post("/api/v1/auth/driver/register", json={**DRIVER, "hourly_rate": "0"})
     assert r.status_code == 422
 
 

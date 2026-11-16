@@ -21,6 +21,50 @@ class DriverDocument {
   final String? note;
 }
 
+/// One answer the driver gave, with the reviewer's verdict on it.
+class AnswerView {
+  const AnswerView({required this.value, required this.status, this.note});
+
+  final String value;
+  final String status;
+  final String? note;
+}
+
+/// The driver's application as the server sees it (the `application` block of GET /drivers/me).
+class DriverApplication {
+  const DriverApplication({
+    this.status = 'NOT_SUBMITTED',
+    this.answers = const {},
+    this.documents = const {},
+    this.needsUpdate = const [],
+  });
+
+  factory DriverApplication.fromJson(Map<String, dynamic> j) => DriverApplication(
+        status: j['status'] as String,
+        answers: {
+          for (final a in (j['answers'] as List).cast<Map<String, dynamic>>())
+            a['key'] as String: AnswerView(value: a['value'] as String, status: a['status'] as String, note: a['review_note'] as String?),
+        },
+        documents: {
+          for (final d in (j['documents'] as List).cast<Map<String, dynamic>>()) d['doc_type'] as String: DriverDocument.fromJson(d),
+        },
+        needsUpdate: (j['needs_update'] as List).cast<String>(),
+      );
+
+  final String status;
+  final Map<String, AnswerView> answers;
+  final Map<String, DriverDocument> documents;
+  final List<String> needsUpdate;
+
+  /// Keys of items the reviewer sent back.
+  Set<String> get flagged => {
+        for (final e in answers.entries)
+          if (e.value.status == 'REJECTED') e.key,
+        for (final e in documents.entries)
+          if (e.value.status == DocumentStatus.rejected) e.key,
+      };
+}
+
 class EarningsPeriod {
   const EarningsPeriod({required this.trips, required this.amount});
 
@@ -61,6 +105,11 @@ abstract class DriverApi {
   Future<void> setAvailability(bool online);
   Future<void> sendLocation(GeoPoint point);
   Future<List<DriverDocument>> documents();
+  Future<FormSpec> applicationForm();
+  Future<DriverApplication> application();
+
+  /// Sends the answers; a 422 comes back as an [ApiException] whose [ApiException.fieldErrors] names the fields.
+  Future<void> submitApplication(Map<String, String> answers);
   Future<void> uploadDocument({required String type, required List<int> bytes, required String filename, required String contentType});
 }
 
@@ -88,6 +137,16 @@ class HttpDriverApi implements DriverApi {
   @override
   Future<List<DriverDocument>> documents() async =>
       (await _client.getList('/drivers/documents')).cast<Map<String, dynamic>>().map(DriverDocument.fromJson).toList();
+
+  @override
+  Future<FormSpec> applicationForm() async => FormSpec.fromJson(await _client.getJson('/forms/driver'));
+
+  @override
+  Future<DriverApplication> application() async =>
+      DriverApplication.fromJson((await _client.getJson('/drivers/me'))['application'] as Map<String, dynamic>);
+
+  @override
+  Future<void> submitApplication(Map<String, String> answers) => _client.postJson('/drivers/application', {'answers': answers});
 
   @override
   Future<void> uploadDocument({required String type, required List<int> bytes, required String filename, required String contentType}) {

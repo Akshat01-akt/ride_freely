@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../core/core.dart';
 import '../../routes.dart';
 import 'auth_scaffold.dart';
@@ -18,7 +17,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _form = GlobalKey<FormState>();
-  final _phone = TextEditingController();
+  final _identifier = TextEditingController();
   final _password = TextEditingController();
   late final _auth = authFor(widget.role);
 
@@ -32,14 +31,14 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _phone.dispose();
+    _identifier.dispose();
     _password.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
-    if (await _auth.login(_phone.text.trim(), _password.text)) {
+    if (await _auth.login(_identifier.text.trim(), _password.text)) {
       Get.offAllNamed(Routes.home(widget.role));
     }
   }
@@ -79,13 +78,13 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           children: [
             AppTextField(
-              key: const Key('phone'),
-              controller: _phone,
-              label: 'Phone number',
-              hint: '98765 43210',
-              icon: Icons.phone_rounded,
-              keyboardType: TextInputType.phone,
-              validator: requiredPhone,
+              key: const Key('identifier'),
+              controller: _identifier,
+              label: 'Email or mobile number',
+              hint: 'you@example.com or 98765 43210',
+              icon: Icons.alternate_email_rounded,
+              keyboardType: TextInputType.emailAddress,
+              validator: requiredIdentifier,
             ),
             const SizedBox(height: 16),
             AppTextField(

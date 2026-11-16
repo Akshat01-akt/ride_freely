@@ -181,7 +181,7 @@ void main() {
     await t.pumpWidget(const RideFreelyApp());
     await t.pumpAndSettle();
     expect(find.byKey(const Key('auth_card')), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const Key('auth_card')), matching: find.byKey(const Key('phone'))), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('auth_card')), matching: find.byKey(const Key('identifier'))), findsOneWidget);
     expect(find.descendant(of: find.byKey(const Key('auth_card')), matching: find.text('Log in')), findsOneWidget);
     final decoration = t.widget<AnimatedContainer>(find.descendant(of: find.byKey(const Key('auth_card')), matching: find.byType(AnimatedContainer)).first).decoration! as BoxDecoration;
     final rest = decoration.boxShadow!.first.blurRadius;

@@ -46,13 +46,18 @@ async def test_replacing_a_required_document_sends_an_approved_driver_back_for_r
     assert (await client.patch("/api/v1/drivers/availability", headers=h, json={"status": "AVAILABLE"})).status_code == 403
 
 
-async def test_a_rejected_driver_who_uploads_again_returns_to_the_review_queue(client, db_session):
+async def test_a_rejected_driver_returns_to_the_review_queue_when_they_submit_again(client, db_session):
+    from tests.helpers import ANSWERS
+
     admin = await admin_headers(client, db_session)
     h, _ = await register_driver(client)
     await _upload(client, h)
+    await _upload(client, h, "ID_PROOF")
     await force_status(db_session, verification_status="REJECTED")
     assert (await client.get("/api/v1/admin/drivers/pending", headers=admin)).json() == []
     await _upload(client, h, "LICENCE", JPEG, "image/jpeg")
+    assert (await _profile(db_session)).verification_status == "REJECTED"  # uploading alone does not resubmit
+    assert (await client.post("/api/v1/drivers/application", headers=h, json={"answers": ANSWERS})).status_code == 200
     assert (await _profile(db_session)).verification_status == "PENDING"
     assert len((await client.get("/api/v1/admin/drivers/pending", headers=admin)).json()) == 1
 
@@ -73,7 +78,7 @@ async def test_rejecting_a_required_document_revokes_an_approved_driver(client, 
     r = await client.patch(f"/api/v1/admin/documents/{doc.id}", headers=admin, json={"status": "REJECTED", "note": "Expired"})
     assert r.status_code == 200
     p = await _profile(db_session)
-    assert p.verification_status == "PENDING" and p.availability_status == "OFFLINE"
+    assert p.verification_status == "REJECTED" and p.availability_status == "OFFLINE"
     assert await get_redis().get(f"driver:location:{pid}") is None
 
 
