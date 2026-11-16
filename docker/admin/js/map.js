@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { onLeave } from './lifecycle.js';
 import { h, statusPill } from './ui.js';
 import { projectPoints, timeAgo } from './util.js';
 
@@ -17,6 +18,8 @@ export async function mapPage() {
   let timer;
   let raf;
   let failed = false;
+  let stopped = false;
+  onLeave(() => { stopped = true; clearTimeout(timer); cancelAnimationFrame(raf); });
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -66,6 +69,7 @@ export async function mapPage() {
   }
 
   function loop(t) {
+    if (stopped) return;
     draw(t);
     raf = requestAnimationFrame(loop);
   }
@@ -95,6 +99,7 @@ export async function mapPage() {
   }
 
   async function poll() {
+    if (stopped) return;
     if (!document.hidden) {
       try {
         drivers = (await api('/admin/drivers/live')).drivers;
@@ -104,19 +109,15 @@ export async function mapPage() {
       } catch (e) { if (e.status === 401) return; failed = true; }
       if (reduce.matches) draw();
     }
-    timer = setTimeout(poll, POLL_MS);
+    if (!stopped) timer = setTimeout(poll, POLL_MS);
   }
 
-  // The page element is replaced on navigation; stop polling and drawing when it leaves the document.
   const root = h('div', {},
     h('div', { class: 'page-head' }, h('h1', {}, 'Live map'), count),
     h('div', { class: 'map-layout' }, h('div', { class: 'card map-card' }, canvas), h('div', {}, info, h('div', { class: 'card' }, list))),
     h('div', { class: 'legend' }, Object.entries(COLORS).map(([s, c]) => h('span', { class: 'legend-item' }, h('span', { class: 'swatch', 'data-status': s }), s.replaceAll('_', ' ').toLowerCase()))));
-  const watchdog = setInterval(() => {
-    if (!root.isConnected) { clearTimeout(timer); cancelAnimationFrame(raf); clearInterval(watchdog); }
-  }, 1000);
   await poll();
-  if (!reduce.matches) raf = requestAnimationFrame(loop);
+  if (!reduce.matches && !stopped) raf = requestAnimationFrame(loop);
   requestAnimationFrame(() => draw());
   return root;
 }

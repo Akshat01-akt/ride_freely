@@ -18,6 +18,8 @@ Future<List<Map<String, String>>> _pump(
   Set<String> flagged = const {},
   Map<String, DocumentState> documents = const {},
   Map<String, String> notes = const {},
+  Set<String> alsoEditable = const {},
+  Map<String, String> serverErrors = const {},
 }) async {
   reduceMotionFor(t);
   final sent = <Map<String, String>>[];
@@ -30,6 +32,8 @@ Future<List<Map<String, String>>> _pump(
           initial: initial,
           flagged: flagged,
           notes: notes,
+          alsoEditable: alsoEditable,
+          serverErrors: serverErrors,
           documents: documents,
           onPickDocument: (_) {},
           onSubmit: (a) async => sent.add(a),
@@ -152,5 +156,32 @@ void main() {
     expect(find.text('Rejected'), findsOneWidget);
     expect(find.text('Blurry'), findsOneWidget);
     expect(find.text('Upload again'), findsOneWidget);
+  });
+
+  testWidgets('a question added while fixing flagged items is editable too', (t) async {
+    final sent = await _pump(
+      t,
+      _spec([_f('hourly_rate', 'number', required: true), _f('badge_no', 'text', required: true), _f('licence_number', 'text', required: true)]),
+      initial: {'hourly_rate': '999', 'licence_number': 'DL-1'},
+      flagged: {'hourly_rate'},
+      alsoEditable: {'badge_no'},
+    );
+    expect(find.byKey(const Key('field_licence_number')), findsNothing);
+    expect(find.text('Needs changes'), findsOneWidget); // only the flagged rate, not the new question
+    await t.enterText(find.byKey(const Key('field_hourly_rate')), '150');
+    await t.enterText(find.byKey(const Key('field_badge_no')), 'B-1');
+    await t.tap(find.text('Submit'));
+    await t.pump();
+    expect(sent.single, {'hourly_rate': '150', 'badge_no': 'B-1'});
+  });
+
+  testWidgets('server errors name the field they belong to', (t) async {
+    await _pump(
+      t,
+      _spec([_f('badge_no', 'text', required: true)]),
+      serverErrors: {'badge_no': 'This is required', 'unknown_key': 'This is not a field on the form'},
+    );
+    expect(find.text('Label badge_no: This is required'), findsOneWidget);
+    expect(find.text('unknown_key: This is not a field on the form'), findsOneWidget);
   });
 }

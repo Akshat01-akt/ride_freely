@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:ride_freely/core/core.dart';
 import 'package:ride_freely/features/customer/profile_form_controller.dart';
 
@@ -26,6 +27,17 @@ void main() {
     expect(s.c.form.value!.version, 2);
     expect(s.c.answers, {'default_address': '12 MG Road'});
     expect(s.c.error.value, isNull);
+  });
+
+  test('the form only appears once the saved answers are loaded', () async {
+    final s = _setup((o) => o.path == '/forms/customer'
+        ? (status: 200, body: _form)
+        : (status: 200, body: {'profile': {'answers': {'default_address': '12 MG Road'}}}));
+    final seen = <Map<String, String>>[];
+    ever(s.c.form, (_) => seen.add(Map.of(s.c.answers)));
+    await s.c.load();
+    expect(seen, isNotEmpty);
+    expect(seen.every((a) => a['default_address'] == '12 MG Road'), isTrue);
   });
 
   test('save puts the answers and reports success', () async {

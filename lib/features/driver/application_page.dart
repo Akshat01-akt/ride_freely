@@ -103,6 +103,7 @@ class _ApplicationPageState extends State<ApplicationPage> {
                         spec: spec,
                         initial: {for (final e in app.answers.entries) e.key: e.value.value},
                         flagged: flagged,
+                        alsoEditable: app.needsUpdate.toSet(),
                         notes: {
                           for (final e in app.answers.entries)
                             if (e.value.status == 'REJECTED' && e.value.note != null) e.key: e.value.note!,

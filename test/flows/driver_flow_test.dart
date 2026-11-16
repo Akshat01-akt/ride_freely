@@ -135,7 +135,7 @@ void main() {
     await t.enterText(find.byKey(const Key('field_licence_number')), 'DL-1');
     await t.tap(find.text('Submit application'));
     await t.pumpAndSettle();
-    expect(find.text('This is not valid'), findsOneWidget);
+    expect(find.text('Driving licence number: This is not valid'), findsOneWidget);
   });
 
   testWidgets('a driver sent back for changes sees the reviewer note and can only edit the flagged item', (t) async {

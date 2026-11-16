@@ -29,6 +29,7 @@ class DynamicForm extends StatefulWidget {
     required this.onSubmit,
     this.initial = const {},
     this.flagged = const {},
+    this.alsoEditable = const {},
     this.notes = const {},
     this.documents = const {},
     this.onPickDocument,
@@ -41,6 +42,9 @@ class DynamicForm extends StatefulWidget {
   final FormSpec spec;
   final Map<String, String> initial;
   final Set<String> flagged;
+
+  /// Questions that are also open while fixing flagged items (for example ones the admin added later).
+  final Set<String> alsoEditable;
 
   /// Reviewer notes by field key, shown on flagged items.
   final Map<String, String> notes;
@@ -62,7 +66,7 @@ class _DynamicFormState extends State<DynamicForm> {
   final _controllers = <String, TextEditingController>{};
 
   bool get _fixing => widget.flagged.isNotEmpty;
-  bool _editable(FormFieldSpec f) => !_fixing || widget.flagged.contains(f.key);
+  bool _editable(FormFieldSpec f) => !_fixing || widget.flagged.contains(f.key) || widget.alsoEditable.contains(f.key);
 
   @override
   void initState() {
@@ -104,6 +108,13 @@ class _DynamicFormState extends State<DynamicForm> {
         if (f.type != FieldType.document && _editable(f) && (_values[f.key] ?? '').trim().isNotEmpty) f.key: _values[f.key]!.trim(),
     };
     await widget.onSubmit(answers);
+  }
+
+  String _labelOf(String key) {
+    for (final f in widget.spec.fields) {
+      if (f.key == key) return f.label;
+    }
+    return key;
   }
 
   Widget _readOnly(FormFieldSpec f) => Padding(
@@ -219,7 +230,7 @@ class _DynamicFormState extends State<DynamicForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final f in widget.spec.visible) _field(f),
-          for (final e in widget.serverErrors.entries) FormError(e.value),
+          for (final e in widget.serverErrors.entries) FormError('${_labelOf(e.key)}: ${e.value}'),
           const SizedBox(height: 8),
           AppButton(label: widget.submitLabel, loading: widget.busy, onPressed: _submit),
         ],

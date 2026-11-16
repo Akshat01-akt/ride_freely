@@ -67,9 +67,11 @@ class ApplicationController extends GetxController {
     } on ApiException catch (e) {
       fieldErrors.assignAll(e.fieldErrors);
       error.value = e.fieldErrors.isEmpty ? e.message : null;
-      // A rejected submit can still have changed what the server knows (nothing does, but stay in step).
+      // The admin may have changed the form since it was loaded: refresh both so new questions appear.
       try {
-        application.value = await _api.application();
+        final results = await Future.wait([_api.applicationForm(), _api.application()]);
+        form.value = results[0] as FormSpec;
+        application.value = results[1] as DriverApplication;
       } on ApiException {
         // The submit error is the useful one to show.
       }

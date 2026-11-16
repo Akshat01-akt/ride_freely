@@ -66,8 +66,13 @@ class FakeDriverApi implements DriverApi {
   Completer<void>? availabilityGate;
   Completer<void>? sendGate;
 
+  int formCalls = 0;
+
   @override
-  Future<FormSpec> applicationForm() async => form;
+  Future<FormSpec> applicationForm() async {
+    formCalls++;
+    return form;
+  }
 
   @override
   Future<DriverApplication> application() async => applicationData;

@@ -9,6 +9,7 @@ import { driversPage } from './js/drivers.js';
 import { formsPage } from './js/forms.js';
 import { mapPage } from './js/map.js';
 import { reviewPage } from './js/review.js';
+import { runLeave } from './js/lifecycle.js';
 import { skeleton, h } from './js/ui.js';
 import { userPage, usersPage } from './js/users.js';
 
@@ -58,6 +59,7 @@ const NAV = [
 
 let renderToken = 0;
 async function render() {
+  runLeave(); // stop timers and loops of the page we are leaving
   if (!session.access) return showLogin();
   const token = ++renderToken;
   const [path, query = ''] = location.hash.replace(/^#/, '').split('?');

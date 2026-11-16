@@ -19,10 +19,12 @@ class ProfileFormController extends GetxController {
     loading.value = true;
     error.value = null;
     try {
-      form.value = FormSpec.fromJson(await _client.getJson('/forms/customer'));
+      final spec = FormSpec.fromJson(await _client.getJson('/forms/customer'));
       final me = await _client.getJson('/customers/me');
       final saved = (me['profile'] as Map?)?['answers'] as Map? ?? const {};
+      // Answers first: the form reads its starting values once, when it first appears.
       answers.assignAll({for (final e in saved.entries) '${e.key}': '${e.value}'});
+      form.value = spec;
     } on ApiException catch (e) {
       form.value = null;
       error.value = e.message;
