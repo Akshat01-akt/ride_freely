@@ -65,11 +65,21 @@ async def review_document(
     doc = await session.get(DriverDocument, doc_id)
     if doc is None:
         raise NotFound
+    revokes = status == DocStatus.REJECTED and doc.doc_type in await required_keys(session, document=True)
+    if revokes:
+        await _check_can_revoke(session, doc.driver_id)
     doc.status, doc.review_note = status, note
-    if status == DocStatus.REJECTED and doc.doc_type in await required_keys(session, document=True):
+    if revokes:
         await _needs_changes(session, redis, doc.driver_id)
     await session.commit()
     return doc
+
+
+async def _check_can_revoke(session: AsyncSession, driver_id: uuid.UUID) -> None:
+    """Sending a driver back is refused while a customer is counting on an accepted or running booking."""
+    profile = await session.get(DriverProfile, driver_id)
+    if profile is not None and profile.verification_status in (VerificationStatus.APPROVED, VerificationStatus.PENDING) and await _has_live_booking(session, driver_id):
+        raise HasActiveBooking
 
 
 async def _needs_changes(session: AsyncSession, redis: Redis, driver_id: uuid.UUID) -> None:
@@ -85,8 +95,11 @@ async def review_answer(
     answer = await session.scalar(select(DriverAnswer).where(DriverAnswer.driver_id == driver_id, DriverAnswer.field_key == key))
     if answer is None:
         raise NotFound
+    revokes = status == DocStatus.REJECTED and key in await required_keys(session, document=False)
+    if revokes:
+        await _check_can_revoke(session, driver_id)
     answer.status, answer.review_note = status, note
-    if status == DocStatus.REJECTED and key in await required_keys(session, document=False):
+    if revokes:
         await _needs_changes(session, redis, driver_id)
     await session.commit()
     return answer
@@ -123,6 +136,8 @@ async def set_verification(
         )
         if not await required_keys(session, document=True) <= approved or rejected is not None:
             raise RequirementsNotMet
+        if None in (profile.licence_number, profile.experience_years, profile.hourly_rate):
+            raise RequirementsNotMet  # pricing and search need the core details
         await session.execute(
             update(DriverAnswer)
             .where(DriverAnswer.driver_id == driver_id, DriverAnswer.status == DocStatus.PENDING)

@@ -115,6 +115,8 @@ async def decide_document(
         return await review.review_document(session, redis, doc_id, DocStatus(body.status), body.note)
     except review.NotFound:
         raise _not_found() from None
+    except review.HasActiveBooking:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This driver has an active booking. Try again after it ends.") from None
 
 
 @router.patch("/drivers/{driver_id}/answers/{key}")
@@ -129,6 +131,8 @@ async def decide_answer(
         answer = await review.review_answer(session, redis, driver_id, key, DocStatus(body.status), body.note)
     except review.NotFound:
         raise _not_found() from None
+    except review.HasActiveBooking:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This driver has an active booking. Try again after it ends.") from None
     return {"key": answer.field_key, "status": answer.status, "review_note": answer.review_note}
 
 

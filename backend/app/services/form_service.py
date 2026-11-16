@@ -13,6 +13,7 @@ from app.schemas.forms import FieldIn, FieldPatch, _check_choices
 MAX_ACTIVE_FIELDS = 30
 MAX_TEXT = 500
 MAX_NUMBER = Decimal("99999999.99")
+MAX_RATE = Decimal("99999.99")  # keeps rate x hours inside the price column
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -156,8 +157,10 @@ def clean_value(field: FormField, raw: str) -> str:
             raise ValueError("Enter a number between 0 and 99999999.99")
         if field.key == "experience_years" and (number != number.to_integral_value() or number > 60):
             raise ValueError("Enter whole years, 0 to 60")
-        if field.key == "hourly_rate" and number <= 0:
-            raise ValueError("The rate must be more than 0")
+        if field.key == "hourly_rate" and (number <= 0 or number > MAX_RATE or number != round(number, 2)):
+            raise ValueError("Enter a rate above 0 up to 99999.99, with at most 2 decimals")
+    elif field.key == "licence_number" and not 3 <= len(value) <= 50:
+        raise ValueError("A licence number is 3 to 50 characters")
     elif field.field_type == "date":
         try:
             if not _DATE.match(value):

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import DocStatus, DriverDocument
 from app.models.driver import DriverProfile, VerificationStatus
-from app.services.review_service import required_keys, send_back_for_review
+from app.services.review_service import HasActiveBooking, _has_live_booking as has_live_booking, required_keys, send_back_for_review
 from app.services.storage import FileStorage
 
 MAX_BYTES = 5 * 1024 * 1024
@@ -58,6 +58,9 @@ async def save_document(
         existing = await session.scalar(
             select(DriverDocument).where(DriverDocument.driver_id == driver_id, DriverDocument.doc_type == doc_type)
         )
+        approved = profile.verification_status == VerificationStatus.APPROVED
+        if existing is not None and approved and doc_type in await required_keys(session, document=True) and await has_live_booking(session, driver_id):
+            raise HasActiveBooking
         if existing is None:
             doc = DriverDocument(driver_id=driver_id, doc_type=doc_type, file_key=key, content_type=content_type, size_bytes=len(data))
             session.add(doc)
@@ -67,7 +70,7 @@ async def save_document(
             doc.status, doc.review_note = DocStatus.PENDING, None
         # A new required document needs a fresh look: approved drivers go back to the queue. Drivers who were sent back
         # for changes return to the queue when they submit the form again.
-        if profile.verification_status == VerificationStatus.APPROVED and doc_type in await required_keys(session, document=True):
+        if existing is not None and approved and doc_type in await required_keys(session, document=True):
             await send_back_for_review(session, redis, profile)
         await session.commit()
     except IntegrityError:

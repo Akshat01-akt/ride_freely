@@ -10,7 +10,7 @@ from app.models.document import DocStatus, DriverDocument
 from app.models.driver import DriverProfile, VerificationStatus
 from app.models.form import FormField
 from app.services import form_service
-from app.services.review_service import send_back_for_review
+from app.services.review_service import HasActiveBooking, _has_live_booking as has_live_booking, send_back_for_review
 
 class ApplicationInvalid(Exception):
     """Per-field problems, keyed by field key, in words the driver can act on."""
@@ -72,15 +72,21 @@ async def submit(session: AsyncSession, redis: Redis, profile: DriverProfile, su
     if errors:
         raise ApplicationInvalid(errors)
 
+    # Only changing something an admin may have approved needs a new look. Answering a question for the first time
+    # (for example one added later) does not: the driver stays bookable and the answer waits for review.
     changed = False
     for key, value in clean.items():
         existing = answers.get(key)
         if existing is None:
             session.add(DriverAnswer(driver_id=profile.id, field_key=key, value=value))
-            changed = True
         elif existing.value != value or existing.status == DocStatus.REJECTED:
-            existing.value, existing.status, existing.review_note = value, DocStatus.PENDING, None
             changed = True
+    if changed and profile.verification_status == VerificationStatus.APPROVED and await has_live_booking(session, profile.id):
+        raise HasActiveBooking
+    for key, value in clean.items():
+        existing = answers.get(key)
+        if existing is not None and (existing.value != value or existing.status == DocStatus.REJECTED):
+            existing.value, existing.status, existing.review_note = value, DocStatus.PENDING, None
     profile.licence_number = merged["licence_number"]
     profile.experience_years = int(Decimal(merged["experience_years"]))
     profile.hourly_rate = Decimal(merged["hourly_rate"])

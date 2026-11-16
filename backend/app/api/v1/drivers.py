@@ -49,6 +49,8 @@ async def submit_application(
 ):
     try:
         await application_service.submit(session, redis, profile, body.answers)
+    except review_service.HasActiveBooking:
+        raise HTTPException(status.HTTP_409_CONFLICT, "You have an accepted or running booking. Change your details after it ends.") from None
     except application_service.ApplicationInvalid as exc:
         raise HTTPException(
             422, [{"loc": ["answers", key], "msg": msg, "type": "value_error"} for key, msg in exc.errors.items()]
@@ -82,6 +84,8 @@ async def upload_document(
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Upload a JPEG, PNG or PDF file") from None
     try:
         return await docs.save_document(session, storage, redis, profile, doc_type, content_type, data)
+    except review_service.HasActiveBooking:
+        raise HTTPException(status.HTTP_409_CONFLICT, "You have an accepted or running booking. Change your details after it ends.") from None
     except docs.UploadConflict:
         raise HTTPException(status.HTTP_409_CONFLICT, "Another upload for this document is in progress. Try again.") from None
 
