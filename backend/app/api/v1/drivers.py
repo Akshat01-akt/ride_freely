@@ -5,13 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_driver_profile, require_role
 from app.core.database import get_session
-from app.models.document import DocType, DriverDocument
+from app.models.document import DriverDocument
 from app.models.driver import AvailabilityStatus, DriverProfile
 from app.models.user import Role, User
 from app.services.location_service import nearby_drivers
-from app.schemas.auth import AvailabilityRequest, DocumentOut, DriverOut
+from app.schemas.auth import ApplicationIn, AvailabilityRequest, DocumentOut, DriverOut
 from app.core.redis import get_redis
-from app.services import document_service as docs
+from app.services import application_service, document_service as docs, form_service
 from app.services import review_service
 from app.services.earnings_service import driver_earnings
 from app.services.storage import FileStorage, get_storage
@@ -35,7 +35,25 @@ async def me(user: User = Depends(require_role(Role.DRIVER)), session: AsyncSess
         verification_status=profile.verification_status,
         availability_status=profile.availability_status,
         rating=profile.rating,
+        application=await application_service.view(session, profile),
     )
+
+
+@router.post("/application", response_model=DriverOut)
+async def submit_application(
+    body: ApplicationIn,
+    profile: DriverProfile = Depends(get_driver_profile),
+    session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
+    user: User = Depends(require_role(Role.DRIVER)),
+):
+    try:
+        await application_service.submit(session, redis, profile, body.answers)
+    except application_service.ApplicationInvalid as exc:
+        raise HTTPException(
+            422, [{"loc": ["answers", key], "msg": msg, "type": "value_error"} for key, msg in exc.errors.items()]
+        ) from None
+    return await me(user, session)
 
 
 @router.get("/earnings")
@@ -45,13 +63,16 @@ async def earnings(profile: DriverProfile = Depends(get_driver_profile), session
 
 @router.post("/documents", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)
 async def upload_document(
-    doc_type: DocType = Form(...),
+    doc_type: str = Form(..., max_length=40),
     file: UploadFile = File(...),
     profile: DriverProfile = Depends(get_driver_profile),
     session: AsyncSession = Depends(get_session),
     storage: FileStorage = Depends(get_storage),
     redis: Redis = Depends(get_redis),
 ):
+    form = await form_service.get_form(session, "driver")
+    if doc_type not in {f.key for f in form["fields"] if f.field_type == "document"}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "This is not a document on the application form")
     data = await file.read(docs.MAX_BYTES + 1)
     try:
         content_type = docs.validate_upload(file.content_type, data)

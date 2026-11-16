@@ -72,14 +72,7 @@ async def register_customer(session: AsyncSession, data: CustomerRegister) -> Us
 async def register_driver(session: AsyncSession, data: DriverRegister) -> User:
     try:
         user = await _create_user(session, data, Role.DRIVER)
-        session.add(
-            DriverProfile(
-                user_id=user.id,
-                licence_number=data.licence_number,
-                experience_years=data.experience_years,
-                hourly_rate=data.hourly_rate,
-            )
-        )
+        session.add(DriverProfile(user_id=user.id))
         await session.commit()
     except IntegrityError:
         await session.rollback()

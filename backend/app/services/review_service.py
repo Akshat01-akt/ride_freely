@@ -8,12 +8,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.booking import Booking, BookingStatus
 from app.models.customer import CustomerProfile
-from app.models.document import DocStatus, DocType, DriverDocument
+from app.models.answer import DriverAnswer
+from app.models.document import DocStatus, DriverDocument
+from app.models.form import FormField
 from app.models.driver import AvailabilityStatus, DriverProfile, VerificationStatus
 from app.models.user import Role, User
 from app.services.location_service import clear_location
 
-REQUIRED_DOCS = (DocType.LICENCE, DocType.ID_PROOF)
+
+async def required_keys(session: AsyncSession, document: bool | None = None) -> set[str]:
+    """Keys of the active required fields on the driver form; document=True/False limits to documents / answers."""
+    query = select(FormField.key).where(FormField.role == "driver", FormField.is_active, FormField.required)
+    if document is not None:
+        query = query.where((FormField.field_type == "document") if document else (FormField.field_type != "document"))
+    return set(await session.scalars(query))
 
 
 class NotFound(Exception):
@@ -38,12 +46,14 @@ async def _profile(session: AsyncSession, driver_id: uuid.UUID) -> DriverProfile
     return profile
 
 
-async def send_back_for_review(session: AsyncSession, redis: Redis, profile: DriverProfile) -> None:
-    """Revoke approval: the driver returns to the review queue and, if online, goes offline.
+async def send_back_for_review(
+    session: AsyncSession, redis: Redis, profile: DriverProfile, to: VerificationStatus = VerificationStatus.PENDING
+) -> None:
+    """Revoke approval: the driver returns to the review queue (PENDING) or to "needs changes" (REJECTED) and, if online, goes offline.
 
     Only AVAILABLE is touched. SUSPENDED stays suspended, and booking states are left for the booking engine.
     """
-    profile.verification_status = VerificationStatus.PENDING
+    profile.verification_status = to
     if profile.availability_status == AvailabilityStatus.AVAILABLE:
         profile.availability_status = AvailabilityStatus.OFFLINE
         await clear_location(session, redis, profile.id)
@@ -56,12 +66,30 @@ async def review_document(
     if doc is None:
         raise NotFound
     doc.status, doc.review_note = status, note
-    if status == DocStatus.REJECTED and doc.doc_type in REQUIRED_DOCS:
-        profile = await session.get(DriverProfile, doc.driver_id)
-        if profile is not None and profile.verification_status == VerificationStatus.APPROVED:
-            await send_back_for_review(session, redis, profile)
+    if status == DocStatus.REJECTED and doc.doc_type in await required_keys(session, document=True):
+        await _needs_changes(session, redis, doc.driver_id)
     await session.commit()
     return doc
+
+
+async def _needs_changes(session: AsyncSession, redis: Redis, driver_id: uuid.UUID) -> None:
+    """A required item was rejected: a driver in review or approved goes to "needs changes" until they fix it."""
+    profile = await session.get(DriverProfile, driver_id)
+    if profile is not None and profile.verification_status in (VerificationStatus.APPROVED, VerificationStatus.PENDING):
+        await send_back_for_review(session, redis, profile, to=VerificationStatus.REJECTED)
+
+
+async def review_answer(
+    session: AsyncSession, redis: Redis, driver_id: uuid.UUID, key: str, status: DocStatus, note: str | None
+) -> DriverAnswer:
+    answer = await session.scalar(select(DriverAnswer).where(DriverAnswer.driver_id == driver_id, DriverAnswer.field_key == key))
+    if answer is None:
+        raise NotFound
+    answer.status, answer.review_note = status, note
+    if status == DocStatus.REJECTED and key in await required_keys(session, document=False):
+        await _needs_changes(session, redis, driver_id)
+    await session.commit()
+    return answer
 
 
 async def _has_live_booking(
@@ -81,6 +109,8 @@ async def set_verification(
 ) -> DriverProfile:
     profile = await _profile(session, driver_id)
     if status == VerificationStatus.APPROVED:
+        if profile.verification_status == VerificationStatus.NOT_SUBMITTED:
+            raise RequirementsNotMet
         approved = set(
             await session.scalars(
                 select(DriverDocument.doc_type).where(
@@ -88,8 +118,16 @@ async def set_verification(
                 )
             )
         )
-        if not set(REQUIRED_DOCS) <= approved:
+        rejected = await session.scalar(
+            select(DriverAnswer.id).where(DriverAnswer.driver_id == driver_id, DriverAnswer.status == DocStatus.REJECTED).limit(1)
+        )
+        if not await required_keys(session, document=True) <= approved or rejected is not None:
             raise RequirementsNotMet
+        await session.execute(
+            update(DriverAnswer)
+            .where(DriverAnswer.driver_id == driver_id, DriverAnswer.status == DocStatus.PENDING)
+            .values(status=DocStatus.APPROVED)
+        )
     if status != VerificationStatus.APPROVED and await _has_live_booking(session, driver_id):
         raise HasActiveBooking
     profile.verification_status = status

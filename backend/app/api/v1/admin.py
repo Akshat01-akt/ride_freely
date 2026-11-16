@@ -24,9 +24,9 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 class PendingDriver(BaseModel):
     id: uuid.UUID
     full_name: str
-    phone: str
-    licence_number: str
-    experience_years: int
+    phone: str | None
+    licence_number: str | None
+    experience_years: int | None
     documents: list[DocumentOut]
 
 

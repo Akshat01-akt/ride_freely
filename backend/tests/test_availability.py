@@ -23,7 +23,7 @@ async def test_going_available_twice_is_fine(client, db_session):
     assert (await client.patch(URL, headers=h, json={"status": "AVAILABLE"})).status_code == 200
 
 
-@pytest.mark.parametrize("verification", ["PENDING", "REJECTED"])
+@pytest.mark.parametrize("verification", ["NOT_SUBMITTED", "PENDING", "REJECTED"])
 async def test_unapproved_driver_cannot_go_available(client, db_session, verification):
     h, _ = await register_driver(client)
     await force_status(db_session, verification_status=verification)

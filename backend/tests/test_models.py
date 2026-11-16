@@ -26,6 +26,6 @@ async def test_driver_profile_defaults(db_session):
     )
     await db_session.commit()
     profile = (await db_session.execute(DriverProfile.__table__.select())).first()
-    assert profile.verification_status == "PENDING"
+    assert profile.verification_status == "NOT_SUBMITTED"
     assert profile.availability_status == "OFFLINE"
     assert profile.rating == 0

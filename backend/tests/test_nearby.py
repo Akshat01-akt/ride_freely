@@ -78,7 +78,7 @@ async def test_only_available_drivers_are_listed(client, db_session, state):
     assert (await _search(client, c)).json()["drivers"] == []
 
 
-@pytest.mark.parametrize("verification", ["PENDING", "REJECTED"])
+@pytest.mark.parametrize("verification", ["NOT_SUBMITTED", "PENDING", "REJECTED"])
 async def test_unverified_drivers_are_never_listed(client, db_session, verification):
     c = await register_customer(client)
     await _go_online(client, db_session, "+919876500001", NEAR)

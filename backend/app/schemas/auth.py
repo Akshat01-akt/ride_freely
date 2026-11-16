@@ -62,10 +62,7 @@ class CustomerRegister(BaseModel):
 
 
 class DriverRegister(CustomerRegister):
-    # Transitional: removed in Task 3 when the application form takes over.
-    licence_number: Annotated[str | None, Field(min_length=3, max_length=50)] = None
-    experience_years: Annotated[int | None, Field(ge=0, le=60)] = None
-    hourly_rate: Annotated[Decimal | None, Field(gt=0, max_digits=8, decimal_places=2)] = None
+    """Same short form as a customer; licence, experience and rate come later with the application."""
 
 
 class CustomerOut(BaseModel):
@@ -76,6 +73,18 @@ class CustomerOut(BaseModel):
     phone: str | None
     email: str | None
     default_address: str | None
+
+
+class ApplicationOut(BaseModel):
+    status: str
+    form_version: int
+    answers: list[dict]
+    documents: list[dict]
+    needs_update: list[str]
+
+
+class ApplicationIn(BaseModel):
+    answers: dict[Annotated[str, Field(max_length=40)], Annotated[str, Field(max_length=2000)]] = Field(max_length=60)
 
 
 class DriverOut(BaseModel):
@@ -91,6 +100,7 @@ class DriverOut(BaseModel):
     verification_status: str
     availability_status: str
     rating: Decimal
+    application: ApplicationOut | None = None
 
 
 class DocumentOut(BaseModel):

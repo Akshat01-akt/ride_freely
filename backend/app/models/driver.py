@@ -10,6 +10,7 @@ from app.models.base import Base
 
 
 class VerificationStatus(StrEnum):
+    NOT_SUBMITTED = "NOT_SUBMITTED"
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
@@ -37,7 +38,7 @@ class DriverProfile(Base):
     experience_years: Mapped[int | None] = mapped_column(Integer, nullable=True)
     hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     verification_status: Mapped[VerificationStatus] = mapped_column(
-        _enum(VerificationStatus), default=VerificationStatus.PENDING, server_default="PENDING"
+        _enum(VerificationStatus), default=VerificationStatus.NOT_SUBMITTED, server_default="NOT_SUBMITTED"
     )
     availability_status: Mapped[AvailabilityStatus] = mapped_column(
         _enum(AvailabilityStatus), default=AvailabilityStatus.OFFLINE, server_default="OFFLINE"
