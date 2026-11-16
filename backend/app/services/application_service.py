@@ -1,7 +1,5 @@
-import re
 import uuid
-from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from redis.asyncio import Redis
 from sqlalchemy import select
@@ -14,49 +12,12 @@ from app.models.form import FormField
 from app.services import form_service
 from app.services.review_service import send_back_for_review
 
-MAX_TEXT = 500
-MAX_NUMBER = Decimal("99999999.99")
-_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-
-
 class ApplicationInvalid(Exception):
     """Per-field problems, keyed by field key, in words the driver can act on."""
 
     def __init__(self, errors: dict[str, str]):
         super().__init__(errors)
         self.errors = errors
-
-
-def _clean(field: FormField, raw: str) -> str:
-    """Return the value to store, or raise ValueError with the reason."""
-    value = raw.strip() if isinstance(raw, str) else ""
-    if field.field_type == "document":
-        raise ValueError("Upload this as a document, not as text")
-    if not value:
-        raise ValueError("This cannot be empty")
-    if len(value) > MAX_TEXT:
-        raise ValueError(f"Keep this under {MAX_TEXT} characters")
-    if field.field_type == "number":
-        try:
-            number = Decimal(value)
-        except InvalidOperation:
-            raise ValueError("Enter a number") from None
-        if not number.is_finite() or number < 0 or number > MAX_NUMBER:
-            raise ValueError("Enter a number between 0 and 99999999.99")
-        if field.key == "experience_years" and (number != number.to_integral_value() or number > 60):
-            raise ValueError("Enter whole years, 0 to 60")
-        if field.key == "hourly_rate" and number <= 0:
-            raise ValueError("The rate must be more than 0")
-    elif field.field_type == "date":
-        try:
-            if not _DATE.match(value):
-                raise ValueError
-            date.fromisoformat(value)
-        except ValueError:
-            raise ValueError("Enter a real date as YYYY-MM-DD") from None
-    elif field.field_type == "choice" and value not in (field.choices or []):
-        raise ValueError("Pick one of the listed options")
-    return value
 
 
 async def _stored(session: AsyncSession, driver_id: uuid.UUID) -> tuple[dict[str, DriverAnswer], dict[str, DriverDocument]]:
@@ -92,7 +53,7 @@ async def submit(session: AsyncSession, redis: Redis, profile: DriverProfile, su
             errors[key] = "This is not a field on the form"
             continue
         try:
-            clean[key] = _clean(by_key[key], raw)
+            clean[key] = form_service.clean_value(by_key[key], raw)
         except ValueError as exc:
             errors[key] = str(exc)
 

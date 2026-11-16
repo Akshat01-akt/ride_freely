@@ -73,6 +73,7 @@ class CustomerOut(BaseModel):
     phone: str | None
     email: str | None
     default_address: str | None
+    profile: dict | None = None
 
 
 class ApplicationOut(BaseModel):

@@ -1,4 +1,7 @@
+import re
 import uuid
+from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -8,6 +11,10 @@ from app.models.form import FormField, FormVersion
 from app.schemas.forms import FieldIn, FieldPatch, _check_choices
 
 MAX_ACTIVE_FIELDS = 30
+MAX_TEXT = 500
+MAX_NUMBER = Decimal("99999999.99")
+_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
 
 # What migration 0006 seeds. A test keeps the two in step; tests also use it to reset the forms.
 DEFAULT_FIELDS = [
@@ -129,3 +136,35 @@ async def reorder(session: AsyncSession, role: str, ids: list[uuid.UUID]) -> Non
         await session.execute(update(FormField).where(FormField.id == field_id).values(position=position))
     await _bump(session, role)
     await session.commit()
+
+
+def clean_value(field: FormField, raw: str) -> str:
+    """Return the value to store, or raise ValueError with the reason."""
+    value = raw.strip() if isinstance(raw, str) else ""
+    if field.field_type == "document":
+        raise ValueError("Upload this as a document, not as text")
+    if not value:
+        raise ValueError("This cannot be empty")
+    if len(value) > MAX_TEXT:
+        raise ValueError(f"Keep this under {MAX_TEXT} characters")
+    if field.field_type == "number":
+        try:
+            number = Decimal(value)
+        except InvalidOperation:
+            raise ValueError("Enter a number") from None
+        if not number.is_finite() or number < 0 or number > MAX_NUMBER:
+            raise ValueError("Enter a number between 0 and 99999999.99")
+        if field.key == "experience_years" and (number != number.to_integral_value() or number > 60):
+            raise ValueError("Enter whole years, 0 to 60")
+        if field.key == "hourly_rate" and number <= 0:
+            raise ValueError("The rate must be more than 0")
+    elif field.field_type == "date":
+        try:
+            if not _DATE.match(value):
+                raise ValueError
+            date.fromisoformat(value)
+        except ValueError:
+            raise ValueError("Enter a real date as YYYY-MM-DD") from None
+    elif field.field_type == "choice" and value not in (field.choices or []):
+        raise ValueError("Pick one of the listed options")
+    return value
