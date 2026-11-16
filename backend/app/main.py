@@ -2,7 +2,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import admin, auth, bookings, customers, drivers, locations
+from app.api.v1 import admin, auth, bookings, customers, drivers, forms, locations
 
 app = FastAPI(title="Ride Freely")
 
@@ -26,5 +26,7 @@ api_router.include_router(auth.router)
 api_router.include_router(bookings.router)
 api_router.include_router(customers.router)
 api_router.include_router(drivers.router)
+api_router.include_router(forms.router)
+api_router.include_router(forms.admin_router)
 api_router.include_router(locations.router)
 app.include_router(api_router)

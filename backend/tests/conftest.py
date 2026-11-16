@@ -58,6 +58,20 @@ def _migrated_test_database():
     )
 
 
+async def _reset_forms(engine) -> None:
+    """Admin tests edit the forms; put the seeded defaults back so tests do not see each other's changes."""
+    from sqlalchemy import insert
+
+    from app.models.form import FormField, FormVersion
+    from app.services.form_service import DEFAULT_FIELDS
+
+    async with engine.begin() as conn:
+        await conn.execute(FormField.__table__.delete())
+        await conn.execute(FormVersion.__table__.delete())
+        await conn.execute(insert(FormField), DEFAULT_FIELDS)
+        await conn.execute(insert(FormVersion), [{"role": "driver", "version": 1}, {"role": "customer", "version": 1}])
+
+
 @pytest_asyncio.fixture
 async def db_session():
     from app.core.database import SessionLocal, engine
@@ -68,6 +82,7 @@ async def db_session():
         await conn.exec_driver_sql(
             "TRUNCATE bookings, driver_locations, driver_documents, driver_profiles, customer_profiles, users RESTART IDENTITY CASCADE"
         )
+    await _reset_forms(engine)
 
 
 @pytest_asyncio.fixture(autouse=True)
