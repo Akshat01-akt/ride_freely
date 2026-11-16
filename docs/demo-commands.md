@@ -19,7 +19,7 @@ docker compose exec -e ADMIN_PASSWORD='choose-a-password' api \
   python -m app.cli create-admin --phone +919000000001 --name "Demo Admin"
 ```
 
-Log in at http://localhost/admin/ with `+919000000001` and that password. (Leave out `-e ADMIN_PASSWORD=...` and the command asks for the password instead.)
+Use `--phone`, `--email`, or both (at least one), for example `--email ops@example.com`. Log in at http://localhost/admin/ with that mobile number or email and the password. Leave out `-e ADMIN_PASSWORD=...` and the command asks for the password instead.
 
 ## 3. Fill it with demo data
 

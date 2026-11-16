@@ -83,8 +83,11 @@ async def register_driver(session: AsyncSession, data: DriverRegister) -> User:
     return user
 
 
-async def create_admin(session: AsyncSession, full_name: str, phone: str, password: str) -> User:
-    data = CustomerRegister(full_name=full_name, phone=phone, password=password)
+async def create_admin(
+    session: AsyncSession, full_name: str, phone: str | None, password: str, email: str | None = None
+) -> User:
+    """An admin has a mobile number, an email address, or both (at least one, like any account)."""
+    data = CustomerRegister(full_name=full_name, phone=phone, email=email, password=password)
     try:
         user = await _create_user(session, data, Role.ADMIN)
         await session.commit()
